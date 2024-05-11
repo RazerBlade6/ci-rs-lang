@@ -1,0 +1,7 @@
+var a = "Hello"
+a = 4;
+a = 4.0;
+
+print a
+
+

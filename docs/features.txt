@@ -1,0 +1,11 @@
+1.  High-level Language
+2.  Dynamically Typed
+3.  Automatic Memory Management
+4.  Types
+    i.   Numbers (64-bit floating point)
+    ii.  Strings 
+    iii. Booleans
+    iv.  Nil (null)
+5. Object-Oriented, supports inheritance, polymorphism, etc.
+6. Statements may be terminated with ; or whitespace (newline)
+7. Variables are declared with var
