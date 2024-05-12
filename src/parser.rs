@@ -1,7 +1,3 @@
-#![allow(unused)]
-
-use std::process::exit;
-
 use crate::token::*;
 use crate::expr::*;
 
@@ -12,9 +8,9 @@ pub struct Parser {
 }
 
 #[derive(Debug)]
-struct ParseError {
+pub struct ParseError {
     msg: String,
-    position: usize
+    invalid: Token
 }
 
 impl Parser {
@@ -30,11 +26,17 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expr, ParseError>  {
-        self.equality()
+        match self.equality() {
+            Ok(n) => Ok(n),
+            Err(e) => Err(e)
+        }
     }
     
     fn equality(&mut self) -> Result<Expr, ParseError> {
-        let mut expr = self.comparison();
+        let mut expr = match self.comparison() {
+            Ok(n) => n,
+            Err(e) => return Err(e)
+        };
 
         while self.expect(&[TokenType::BangEqual, TokenType::EqualEqual]) {
             let operator = self.peek(1);
@@ -42,10 +44,10 @@ impl Parser {
                 Ok(n) => n,
                 Err(e) => return Err(e)
             };
-            expr = Ok(Expr::new_binary(expr?, operator, right));
+            expr = Expr::new_binary(expr, operator, right);
         }
 
-        expr
+        Ok(expr)
     }
     
     fn comparison(&mut self) -> Result<Expr, ParseError> {
@@ -53,7 +55,7 @@ impl Parser {
             Ok(n) => n,
             Err(e) => return Err(e)
         };
-
+    
         while self.expect(&[TokenType::Greater, TokenType::GreaterEqual, TokenType::Less, TokenType::LessEqual]) {
             let operator = self.peek(1);
             let right = match self.term() {
@@ -78,7 +80,7 @@ impl Parser {
                 Ok(n) => n,
                 Err(e) => return Err(e)
             };
-            expr = Expr::Binary { left: Box::new(expr), operator: operator, right: Box::new(right) };
+            expr = Expr::new_binary(expr, operator, right);
         }
 
         Ok(expr)
@@ -126,7 +128,7 @@ impl Parser {
                 Ok(n) => n,
                 Err(e) => return Err(e)
             };
-            expr = Expr::Binary { left: Box::new(expr), operator: operator, right: Box::new(right) };
+            expr = Expr::new_binary(expr, operator, right);
         }
 
         Ok(expr)
@@ -139,10 +141,13 @@ impl Parser {
                 Ok(n) => n,
                 Err(e) => return Err(e)
             };
-            return Ok(Expr::Unary { operator: operator, right: Box::new(right) });
+            return Ok(Expr::Unary { operator, right: Box::new(right)});
         }
 
-        
+        match self.primary() {
+            Ok(n) => Ok(n),
+            Err(e) => Err(e)
+        }
     }
     
     fn primary(&mut self) -> Result<Expr, ParseError> {
@@ -150,10 +155,13 @@ impl Parser {
         if self.expect(&[TokenType::True]) {return Ok(Expr::Literal { literal: LitValue::True(true)});}
         if self.expect(&[TokenType::Nil]) {return Ok(Expr::Literal { literal: LitValue::Nil });}
 
-        if self.expect(&[TokenType::Number])  {
+        if self.expect(&[TokenType::Number]) {
             let temp = match self.peek(1).get_literal() {
                 Literal::Numeric(n) => n,
-                _ => return Err(ParseError::new("Invalid use of Number", self.current))
+                _ => return Err(ParseError::new("Invalid use of Number", match self.tokens.get(self.current) {
+                    Some(&ref t) => t.clone(),
+                    None => Token::new(TokenType::Eof, "", Literal::Null, self.current),
+                }))
             };
             let literal = LitValue::Number(temp);
         }
@@ -167,22 +175,52 @@ impl Parser {
             return Ok(Expr::Grouping { expr: Box::new(expr) })
         } 
 
-        Err(ParseError::new("Invalid Expression", self.current))
+        Err(ParseError::new("Invalid Expression", match self.tokens.get(self.current) {
+            Some(&ref t) => t.clone(),
+            None => Token::new(TokenType::Eof, "", Literal::Null, self.current),
+        }))
     }
     
     fn eat(&mut self, ttype: TokenType, msg: &str) -> Result<Token, ParseError>  {
         if self.check(&ttype) {
             return Ok(self.advance());
         } else {
-            return Err(ParseError::new(msg, self.current))
+            return Err(ParseError::new(msg, match self.tokens.get(self.current) {
+                Some(&ref t) => t.clone(),
+                None => Token::new(TokenType::Eof, "", Literal::Null, self.current),
+            }))
         }
-        
     }
 }
 
 impl ParseError {
-    fn new(msg: &str, current: usize) -> Self {
-        Self {msg: msg.to_string(), position: current}
+    fn new(msg: &str, invalid: Token) -> Self {
+        Self {msg: msg.to_string(), invalid }
+    }
+
+    fn report_parse_error(&self) {
+        println!("[Parser] Error at Token: {}: {}", self.invalid.to_string(), self.msg)
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use crate::Scanner;
+    use crate::parser::*;
+
+    #[test]
+    fn test_parser() {
+        let testvar = "-123 + (45.67)";
+        let tokens = Scanner::new(&testvar).scan_tokens();
+
+        for tok in tokens.clone() {
+            println!("{}",tok.to_string());
+        }
+
+        let mut parser = Parser::new(tokens);
+        match parser.parse() {
+            Ok(e) => println!("{}", e.to_string()),
+            Err(er) => er.report_parse_error(),
+        }        
+    }
+}
