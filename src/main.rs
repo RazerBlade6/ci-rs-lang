@@ -11,6 +11,7 @@ use std::{
 
 use scanner::*;
 use token::*;
+use parser::*;
 
 fn run_prompt() -> Result<(), String> {
     let mut stdin = io::stdin().lock();
@@ -48,9 +49,13 @@ fn run(src: &str) {
     let mut scanner = Scanner::new(src);
     let tokens: Vec<Token> = scanner.scan_tokens();
 
-    for tok in tokens {
+    for tok in &tokens {
         println!("{}", tok.to_string());
     }
+
+    let mut parser = Parser::new(tokens);
+    let expr = parser.parse();
+    println!("Parsed Expr is: {}", expr.to_string())
 }
 
 fn main() {

@@ -20,6 +20,21 @@ impl LitValue {
             LitValue::Nil => return String::from("nil")
         }
     }
+
+    pub fn from_token(token: Token) -> Self {
+        match token.get_type() {
+            TokenType::Number => Self::Number(match token.get_lexeme().parse::<f64>() {
+                Ok(f) => f,
+                Err(_) => panic!("Could not parse as Number")
+            }),
+
+            TokenType::String => Self::Str(token.get_lexeme().to_string()),
+            TokenType::Identifier => Self::Str(token.get_lexeme().to_string()),
+            TokenType::True => LitValue::True(true),
+            TokenType::False => LitValue::False(false),
+            _ => panic!("Could Not get literal from {}", token.to_string())
+        }
+    } 
 }
 
 pub enum Expr {
@@ -53,11 +68,11 @@ impl Expr {
     }
 
     pub fn new_binary(left: Expr, operator: Token, right: Expr) -> Self {
-        Self::Binary { left: Box::new(left), operator, right: Box::new(right) }
+        Self::Binary { left: Box::from(left), operator, right: Box::from(right) }
     }    
 
     pub fn new_grouping(expr: Expr) -> Self {
-        Self::Grouping { expr: Box::new(expr) }
+        Self::Grouping { expr: Box::from(expr) }
     }
 
     pub fn new_literal(literal: LitValue) -> Self {
@@ -65,7 +80,7 @@ impl Expr {
     }
 
     pub fn new_unary(operator: Token, right: Expr) -> Self {
-        Self::Unary { operator, right: Box::new(right) }
+        Self::Unary { operator, right: Box::from(right) }
     }
 
     pub fn new_operator(token: Token) -> Self {

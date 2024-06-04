@@ -212,3 +212,13 @@ impl Scanner {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::scanner::*;
+
+    #[test]
+    fn test_scanner() {
+        
+    }
+}
