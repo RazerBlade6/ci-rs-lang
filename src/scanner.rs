@@ -1,8 +1,29 @@
+//! # The container module for the Token Scanner
+//! 
+//! Holds all functionality for token scanning and lexing.
+//! Though the module is called `scanner`, it is more properly described as a lexer.
+//! 
+//! The only exposed components of this module are the 
+//! `Scanner::new(src: &str) -> Self` and `Scanner::scan_tokens() -> Vec<Token>`
+//! 
+//! Note: This method returns a Vector of Tokens from source strings.
+//! However, it does not itself contain specifications of said tokens.
+//! Those details may be found in `crate::token`
+//! 
+//! ## Usage
+//! ```
+//! use scanner::Scanner;
+//! fn main() {
+//!     let src: &str = "some_example_str";
+//!     let mut scanner: Scanner = Scanner::new(src);
+//!     let tokens: Vec<Token> = scanner.scan_tokens();
+//! }
+//! ```
 use std::collections::HashMap;
 use lazy_static::*;
+use crate::token::{Token, TokenType as Type, Literal};
 
-use crate::token::{Token, TokenType as TType, Literal};
-
+/// A simple Scanner class.
 pub struct Scanner {
     src: String,
     tokens: Vec<Token>,
@@ -12,26 +33,26 @@ pub struct Scanner {
 }
 
 lazy_static! {
-    static ref KEYWORD_MAP: HashMap<&'static str, TType> = {
-        let m = HashMap::<&'static str, TType>::from([
-            ("and",    TType::And),
-            ("class",  TType::Class),
-            ("else",   TType::Else),
-            ("false",  TType::False),
-            ("for",    TType::For),
-            ("fun",    TType::Fun),
-            ("if",     TType::If),
-            ("nil",    TType::Nil),
-            ("or",     TType::Or),
-            ("print",  TType::Print),
-            ("return", TType::Return),
-            ("super",  TType::Super),
-            ("this",   TType::This),
-            ("true",   TType::True),
-            ("var",    TType::Var),
-            ("while",  TType::While)
+    static ref KEYWORD_MAP: HashMap<&'static str, Type> = {
+        let map = HashMap::<&'static str, Type>::from([
+            ("and",    Type::And),
+            ("class",  Type::Class),
+            ("else",   Type::Else),
+            ("false",  Type::False),
+            ("for",    Type::For),
+            ("fun",    Type::Fun),
+            ("if",     Type::If),
+            ("nil",    Type::Nil),
+            ("or",     Type::Or),
+            ("print",  Type::Print),
+            ("return", Type::Return),
+            ("super",  Type::Super),
+            ("this",   Type::This),
+            ("true",   Type::True),
+            ("var",    Type::Var),
+            ("while",  Type::While)
         ]); 
-        m
+        map
     };
 }
 
@@ -52,7 +73,7 @@ impl Scanner {
             self.scan_token();
         }
 
-        let eof_token=  Token::new(TType::Eof, "", Literal::Null, self.line);
+        let eof_token=  Token::new(Type::Eof, "", Literal::Null, self.line);
         self.tokens.push(eof_token);
         self.tokens.clone()
     }
@@ -64,51 +85,51 @@ impl Scanner {
     fn scan_token(&mut self) {
         let c = self.advance(); 
         match c {
-            '(' => self.add_token_t(TType::LeftParen),
-            ')' => self.add_token_t(TType::RightParen),
-            '{' => self.add_token_t(TType::LeftBrace),
-            '}' => self.add_token_t(TType::RightBrace),
-            ',' => self.add_token_t(TType::Comma),
-            '.' => self.add_token_t(TType::Dot),
-            '-' => self.add_token_t(TType::Minus),
-            '+' => self.add_token_t(TType::Plus),
-            ';' => self.add_token_t(TType::SemiColon),
-            '*' => self.add_token_t(TType::Star),
+            '(' => self.add_token_t(Type::LeftParen),
+            ')' => self.add_token_t(Type::RightParen),
+            '{' => self.add_token_t(Type::LeftBrace),
+            '}' => self.add_token_t(Type::RightBrace),
+            ',' => self.add_token_t(Type::Comma),
+            '.' => self.add_token_t(Type::Dot),
+            '-' => self.add_token_t(Type::Minus),
+            '+' => self.add_token_t(Type::Plus),
+            ';' => self.add_token_t(Type::SemiColon),
+            '*' => self.add_token_t(Type::Star),
             '!' => { 
                 if self.expect('=') {
-                    self.add_token_t(TType::BangEqual);
+                    self.add_token_t(Type::BangEqual);
                 } else {
-                    self.add_token_t(TType::Bang)
+                    self.add_token_t(Type::Bang)
                 }
             },
             '=' => { 
                 if self.expect('=') {
-                    self.add_token_t(TType::EqualEqual);
+                    self.add_token_t(Type::EqualEqual);
                 } else {
-                    self.add_token_t(TType::Equal);
+                    self.add_token_t(Type::Equal);
                 }
             },
             '<' => { 
                 if self.expect('=') {
-                    self.add_token_t(TType::LessEqual);
+                    self.add_token_t(Type::LessEqual);
                 } else {
-                    self.add_token_t(TType::Less);
+                    self.add_token_t(Type::Less);
                 }
             },
             '>' => { 
                 if self.expect('=') {
-                    self.add_token_t(TType::GreaterEqual);
+                    self.add_token_t(Type::GreaterEqual);
                 } else {
-                    self.add_token_t(TType::Greater);
+                    self.add_token_t(Type::Greater);
                 }
             },
             '/' => {
                 if self.expect('/') {
                     while self.peek(0) != '\n' && !self.at_end() {self.advance();}
                 } else if self.expect('*'){
-                    self.multiline_comment();
+                    self.multi_line_comment();
                 } else {
-                    self.add_token_t(TType::Slash);
+                    self.add_token_t(Type::Slash);
                 }
             }
             '"' => self.string(),
@@ -144,13 +165,13 @@ impl Scanner {
         true
     }
 
-    fn add_token_t(&mut self, ttype: TType) {
-        self.add_token(ttype, Literal::Null);
+    fn add_token_t(&mut self, token_type: Type) {
+        self.add_token(token_type, Literal::Null);
     }
 
-    fn add_token(&mut self, ttype: TType, literal: Literal) {
+    fn add_token(&mut self, token_type: Type, literal: Literal) {
         let text = &self.src[self.start..self.current];
-        self.tokens.push(Token::new(ttype, text, literal, self.line));
+        self.tokens.push(Token::new(token_type, text, literal, self.line));
     }
 
     fn number(&mut self) {
@@ -161,7 +182,7 @@ impl Scanner {
             while self.peek(0).is_ascii_digit() {self.advance();}
         }
 
-        self.add_token(TType::Number, Literal::Numeric(self.src[self.start..self.current].parse::<f64>().unwrap()))
+        self.add_token(Type::Number, Literal::Numeric(self.src[self.start..self.current].parse::<f64>().unwrap()))
     }
 
     pub fn error(&self, loc: &str, msg: &str) {
@@ -169,8 +190,12 @@ impl Scanner {
     }
     
     fn peek(&self, n: usize) -> char {
-        if self.current + n >= self.src.len() { return '\0'}
-        return self.src.chars().nth(self.current + n).unwrap()
+        // if self.current + n >= self.src.len() { return '\0'}
+        // return self.src.chars().nth(self.current + n).unwrap()
+        match self.src.chars().nth(self.current + n) {
+            Some(c) => c,
+            None => '\0'
+        }
     }
     
     fn string(&mut self) {
@@ -183,7 +208,7 @@ impl Scanner {
         self.advance();
 
         let literal = self.src[self.start + 1..self.current - 1].to_string();
-        self.add_token(TType::String, Literal::Str(literal));
+        self.add_token(Type::String, Literal::Str(literal));
     }
     
     fn identifier(&mut self) {
@@ -193,22 +218,27 @@ impl Scanner {
             c = self.peek(0);
         }
         let s = &self.src[self.start..self.current];
+        dbg!(s);
 
         let token_type = match KEYWORD_MAP.get(&s) {
-            Some(t) => t.to_owned(),
-            None => TType::Identifier
+            Some(t) => t.clone(),
+            None => Type::Identifier
         };
 
         let literal = match token_type {
-            TType::Identifier => Literal::Id(s.to_string()),
-            _                 => Literal::Keyword(s.to_string())
+            Type::Identifier => Literal::Id(s.to_string()),
+            _ => Literal::Keyword(s.to_string())
         };
         self.add_token(token_type, literal)
     }
     
-    fn multiline_comment(&mut self) {
+    fn multi_line_comment(&mut self) {
         while self.peek(0) != '*' && !self.at_end() {
+            if self.peek(1) == '/' {
+                return;
+            }
             
+
         }
     }
 }
@@ -219,6 +249,16 @@ mod tests {
 
     #[test]
     fn test_scanner() {
-        
+        let src = "123 + 45.67";
+        let mut scanner: Scanner = Scanner::new(src);
+        let tokens = scanner.scan_tokens();
+
+        assert_eq!(
+            vec![Token::new(Type::Number, "123", Literal::Numeric(123.0), 1),
+            Token::new(Type::Plus, "+", Literal::Null, 1),
+            Token::new(Type::Number, "45.67", Literal::Numeric(45.67), 1),
+            Token::new(Type::Eof, "", Literal::Null, 1)],
+            tokens
+        );
     }
 }

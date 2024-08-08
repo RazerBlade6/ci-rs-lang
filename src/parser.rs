@@ -1,92 +1,133 @@
-use crate::{expr::*, Token, TokenType as Type};
+use crate::{
+    expr::*, 
+    Token, 
+    TokenType as Type
+};
 
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize
 }
 
+
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
         Self {tokens, current: 0}
     }
 
-    pub fn parse(&mut self) -> Expr {
+    pub fn parse(&mut self) -> Result<Expr, String> {
         self.expression()
     }
 
-    fn expression(&mut self) -> Expr {
+    fn expression(&mut self) -> Result<Expr, String> {
         self.equality()
     }
     
-    fn equality(&mut self) -> Expr {
-        let mut expr = self.comparison();
+    fn equality(&mut self) -> Result<Expr, String> {
+        let mut expr = match self.comparison() {
+            Ok(e) => e,
+            Err(p) => return Err(p)
+        };
 
         while self.match_tokens(&[Type::BangEqual, Type::EqualEqual]) {
             let operator = self.previous();
-            let right = self.comparison();
+            let right = match self.comparison() {
+                Ok(e) => e,
+                Err(p) => return Err(p)
+            };
             expr = Expr::new_binary(expr, operator, right);
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn comparison(&mut self) -> Expr {
-        let mut expr = self.term();
+    fn comparison(&mut self) -> Result<Expr, String> {
+        let mut expr = match self.term() {
+            Ok(e) => e,
+            Err(p) => return Err(p)
+        };
 
         while self.match_tokens(&[Type::Greater, Type::GreaterEqual, Type::Less, Type::LessEqual]) {
             let operator = self.previous();
-            let right = self.term();
+            let right = match self.term() {
+                Ok(e) => e,
+                Err(p) => return Err(p)
+            };
             expr = Expr::new_binary(expr, operator, right);
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn term(&mut self) -> Expr {
-        let mut expr = self.factor();
+    fn term(&mut self) -> Result<Expr, String> {
+        let mut expr = match self.factor() {
+            Ok(e) => e,
+            Err(p) => return Err(p)
+        };
 
         while self.match_tokens(&[Type::Minus, Type::Plus]) {
             let operator = self.previous();
-            let right = self.factor();
+            let right = match self.factor() {
+                Ok(e) => e,
+                Err(p) => return Err(p)
+            };
             expr = Expr::new_binary(expr, operator, right);
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn factor(&mut self) -> Expr {
-        let mut expr = self.unary();
+    fn factor(&mut self) -> Result<Expr, String> {
+        let mut expr = match self.unary() {
+            Ok(e) => e,
+            Err(p) => return Err(p)
+        };
 
         while self.match_tokens(&[Type::Slash, Type::Star]) {
             let operator = self.previous();
-            let right = self.factor();
+            let right = match self.factor() {
+                Ok(e) => e,
+                Err(p) => return Err(p)
+            };
             expr = Expr::new_binary(expr, operator, right);
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn unary(&mut self) -> Expr {
+    fn unary(&mut self) -> Result<Expr, String> {
         if self.match_tokens(&[Type::Bang, Type::Minus]) {
             let operator = self.previous();
-            let right = self.unary();
-            return Expr::new_unary(operator, right);
+            let right = match self.unary() {
+                Ok(e) => e,
+                Err(p) => return Err(p)
+            };
+            return Ok(Expr::new_unary(operator, right));
         }
 
         self.primary()
     }
 
-    fn primary(&mut self) -> Expr {
-        if self.match_tokens(&[Type::LeftParen]) {
-            let expr = self.expression();
-            self.consume(Type::RightParen, "Expected ')'");
-            return Expr::new_grouping(expr)
+    fn primary(&mut self) -> Result<Expr, String> {
+        let tok = self.peek();
+        dbg!(&tok);
+        match tok.get_type() {
+            Type::LeftParen => {
+                self.advance();
+                let expr = self.expression()?;
+                let _ = self.consume(Type::RightParen, "Expected `)`");
+                return Ok(Expr::new_grouping(expr))
+            },
+            Type::False | Type::True | Type::Nil | Type::Number | Type::String => {
+                self.advance();
+                return Ok(Expr::new_literal(LitValue::from_token(tok)))
+            },
+            Type::Identifier => {
+                self.advance();
+                return Ok(Expr::new_literal(LitValue::from_token(tok)))
+            }
+            _ => return Err(String::from("Expected Expression"))
         }
-        
-        let expr = Expr::new_literal(LitValue::from_token(self.peek()));
-        self.advance();
-        expr
-
     }
 
     fn match_tokens(&mut self, types: &[Type]) -> bool {
@@ -101,9 +142,34 @@ impl Parser {
         false
     }
 
-    fn consume(&mut self, typ: Type, msg: &str) {
-        if self.peek().get_type() == typ {self.advance();}
-        else {panic!("{}", msg);}
+    fn synchronise(&mut self) {
+        self.advance();
+
+        while !self.is_at_end() {
+            if self.previous().get_type() == Type::SemiColon {return;}
+
+            match self.peek().get_type() {
+                Type::Class => return,
+                Type::Fun => return,
+                Type::Var => return,
+                Type::For => return,
+                Type::If => return,
+                Type::While => return,
+                Type::Print => return,
+                Type::Return => return,
+                _ => ()
+            }
+        }
+
+        self.advance();
+    }
+
+    fn consume(&mut self, typ: Type, msg: &'static str) -> Result<Token, String> {
+        let token = self.peek();
+        if token.get_type() == typ {self.advance(); Ok(token)}
+        else {
+            Err(format!("Line {}: {}", self.peek().get_line(), msg))
+        }
     }
 
     fn advance(&mut self) -> Token {
@@ -128,5 +194,20 @@ impl Parser {
     fn previous(&mut self) -> Token {
         self.tokens[self.current - 1].to_owned()
     }
-    
+}
+
+mod tests {
+    use crate::Scanner;
+    use crate::Parser;
+
+    #[test]
+    fn test_parse() {
+        
+        let src = "123 + (45.67)";
+        let mut parser = Parser::new(Scanner::new(src).scan_tokens());
+        let expr = parser.parse().expect("Not yet Implemented");
+        println!("{}", expr.to_string());
+
+        assert_eq!(src.to_string(), expr.to_string());
+    }
 }

@@ -42,11 +42,11 @@ pub enum Expr {
     Grouping {expr: Box<Expr>},
     Literal {literal: LitValue},
     Unary {operator: Token, right: Box<Expr>},
-    Operator {token: Token}
+    Operator {token: Token},
+    Default
 }
 
 impl Expr {
-
     pub fn to_string(&self) -> String {
         match self {
             Expr::Binary { left, operator, right } => {
@@ -63,6 +63,9 @@ impl Expr {
             },
             Expr::Operator { token } => {
                 token.get_lexeme().to_string()
+            },
+            Expr::Default => {
+                format!("You shouldn't be here")
             }
         }
     }
@@ -98,10 +101,9 @@ mod tests {
         
         let soln1 = String::from("-123 * (45.67)");
 
-        let expr1 = Expr::Binary { left: Box::new(Expr::Unary { operator: Token::new(TokenType::Minus, "-", Literal::Null, 1), right: (Box::new(Expr::Literal { literal: LitValue::Number(123.0) }))}), operator: Token::new(TokenType::Star, "*", Literal::Null, 1), right: Box::new(Expr::Grouping { expr: Box::new(Expr::Literal { literal: LitValue::Number(45.67) }) })};
+        let expr1 = Expr::Binary { left: Box::new(Expr::Unary { operator: Token::new(TokenType::Minus, "-", Literal::Null, 1), right: (Box::new(Expr::Literal { literal: LitValue::Number(123.0)}))}), operator: Token::new(TokenType::Star, "*", Literal::Null, 1), right: Box::new(Expr::Grouping { expr: Box::new(Expr::Literal { literal: LitValue::Number(45.67)})})};
 
         let res1 = expr1.to_string();
         assert_eq!(res1, soln1);
-
     }
 }

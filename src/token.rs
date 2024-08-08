@@ -1,17 +1,41 @@
+//! # Module for the Token Struct and TokenType Enum
+//! 
+//! Contains definitions and implementations of Token and TokenType
+//! 
+//! TokenType implements basic `to_string()` functionality, though it actually returns
+//! an `&str` 
+//! 
+//! ## Usage
+//! ```
+//! use token::*;
+//! 
+//! fn main() {
+//!     let token  = Token::new(
+//!         token_type: LeftParen,
+//!         lexeme: "(",
+//!         literal: Literal::Null,
+//!         line: 0
+//!     )
+//! }
+//! ```
+//! 
+//! Further, in the translation from Java to Rust, the `Literal` enum, which holds 
+//! values for various Tokens.
+//! 
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Copy)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen, RightParen, LeftBrace, RightBrace,
     Comma, Dot, Minus, Plus, SemiColon, Slash, Star,
   
-    // One or two character tokens.
+    // One or two character tokens
     Bang, BangEqual,
     Equal, EqualEqual,
     Greater, GreaterEqual,
     Less, LessEqual,
   
-    // Literals.
+    // Literals
     Identifier, String, Number,
   
     // Keywords.
@@ -68,7 +92,7 @@ impl TokenType {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
     Numeric(f64),
     Str(String),
@@ -80,16 +104,16 @@ pub enum Literal {
 impl Literal {
     pub fn to_string(&self) -> &str {
         match self {
-            Literal::Numeric(_) => return "Numeric",
+            Literal::Numeric(_)          => return "Numeric",
             Literal::Str(s)     => return s.as_str(),
-            Literal::Id(_)      => return "Identifier",
+            Literal::Id(_)               => return "Identifier",
             Literal::Keyword(s) => return s.as_str(),
-            Literal::Null       => return "Null",
+            Literal::Null               => return "Null",
         }
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Token {
     token_type: TokenType,
     lexeme: String,
@@ -103,10 +127,8 @@ impl Token {
     }
 
     pub fn to_string(&self) -> String {
-        let s = "Token => Type: ".to_owned() + self.token_type.to_string() + " Lexeme: " +
-                        &self.lexeme + " Literal: " + self.literal.to_string() + " at Line: " + &self.line.to_string();
-        
-        s
+        "Token => Type: ".to_owned() + self.token_type.to_string() + " Lexeme: " +
+        &self.lexeme + " Literal: " + self.literal.to_string() + " at Line: " + &self.line.to_string()
     }
 
     pub fn get_lexeme(&self) -> &str {
@@ -119,5 +141,9 @@ impl Token {
 
     pub fn get_literal(&self) ->  Literal {
         self.literal.clone()
+    }
+
+    pub fn get_line(&self) -> usize {
+        self.line
     }
 }

@@ -1,30 +1,29 @@
+
 mod token;
 mod scanner;
 mod expr;
 mod parser;
 
-use std::{
-    env,
-    io::{self, BufRead, Write},
-    process::exit,
-};
-
-use scanner::*;
+use std::{env, io::{self, BufRead, Write}, process::{exit, Command}};
+use scanner::Scanner;
 use token::*;
 use parser::*;
+use expr::Expr;
 
 fn run_prompt() -> Result<(), String> {
-    let mut stdin = io::stdin().lock();
+    let esc_key = match env::consts::OS {
+        "windows" => "CTRL + Z",
+        _ => "CTRL + D"
+    };
+    println!("Welcome to the Lox Interpreter!\nPress {} to exit", esc_key);
 
-    println!("Welcome to the Lox Interpreter. Press CTRL+D to exit.\n");
+    let mut stdin: io::StdinLock<'static> = io::stdin().lock();
+    let mut stdout: io::StdoutLock<'static> = io::stdout().lock();
 
     loop {
         let mut buffer = String::new();
-        print!("> ");
-        match io::stdout().flush() {
-            Ok(_) => (),
-            Err(_) => return Err(String::from("Failed to clear output")),
-        }
+        print!(">>> ");
+        stdout.flush().unwrap();
 
         match stdin.read_line(&mut buffer) {
             Ok(n) => {
@@ -36,34 +35,40 @@ fn run_prompt() -> Result<(), String> {
             Err(_) => return Err(String::from("Failed to read input")),
         }
 
+        if &buffer == "\n" || &buffer == "\r\n" {
+            println!("");
+            continue;
+        }
+
         println!("You Entered: {buffer}");
-        run(buffer.trim());
+        if &buffer[0..4] == "sys." {
+            Command::new("powershell")
+                .arg(&buffer[4..].trim())
+                .spawn()
+                .expect("Failed to run item")
+                .wait()
+                .expect("Failed to wait");
+        } else {
+            run(buffer.trim());
+        }
     }
 }
 
 fn run_file(_src: &str) -> Result<(), String> {
-    todo!("Ability to read files will be added in future dlc for only $99.99!")
+    todo!("Ability to read files will be added in future DLC for only $99.99!")
 }
 
 fn run(src: &str) {
-    let mut scanner = Scanner::new(src);
+    let mut scanner: Scanner = Scanner::new(src);
     let tokens: Vec<Token> = scanner.scan_tokens();
-
-    for tok in &tokens {
-        println!("{}", tok.to_string());
-    }
-
-    let mut parser = Parser::new(tokens);
-    let expr = parser.parse();
+    let mut parser: Parser = Parser::new(tokens);
+    let expr: Expr = parser.parse().expect("Currently Not Implemented");
     println!("Parsed Expr is: {}", expr.to_string())
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    for arg in &args {
-        println!("{arg}");
-    }
 
     match args.len() {
         1 => match run_prompt() {
