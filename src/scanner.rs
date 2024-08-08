@@ -218,8 +218,6 @@ impl Scanner {
             c = self.peek(0);
         }
         let s = &self.src[self.start..self.current];
-        dbg!(s);
-
         let token_type = match KEYWORD_MAP.get(&s) {
             Some(t) => t.clone(),
             None => Type::Identifier

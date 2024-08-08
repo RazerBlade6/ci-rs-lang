@@ -8,7 +8,7 @@ use std::{env, io::{self, BufRead, Write}, process::{exit, Command}};
 use scanner::Scanner;
 use token::*;
 use parser::*;
-use expr::Expr;
+use expr::{Expr, LitValue};
 
 fn run_prompt() -> Result<(), String> {
     let esc_key = match env::consts::OS {
@@ -22,7 +22,7 @@ fn run_prompt() -> Result<(), String> {
 
     loop {
         let mut buffer = String::new();
-        print!(r#">>>` "#);
+        print!(r#">>> "#);
         stdout.flush().unwrap();
 
         match stdin.read_line(&mut buffer) {
@@ -40,12 +40,11 @@ fn run_prompt() -> Result<(), String> {
             continue;
         }
 
-        println!("You Entered: {buffer}");
         if &buffer[0..4] == "sys." {
             Command::new("powershell")
                 .arg(&buffer[4..].trim())
                 .spawn()
-                .expect("Failed to run item")
+                .unwrap()
                 .wait()
                 .expect("Failed to wait");
         } else {
@@ -62,8 +61,9 @@ fn run(src: &str) {
     let mut scanner: Scanner = Scanner::new(src);
     let tokens: Vec<Token> = scanner.scan_tokens();
     let mut parser: Parser = Parser::new(tokens);
-    let expr: Expr = parser.parse().expect("Currently Not Implemented");
-    println!("Parsed Expr is: {}", expr.to_string())
+    let expr: Expr = parser.parse().unwrap();
+    let result: LitValue = expr.evaluate().unwrap();
+    println!("Result is: {}", result.to_string())
 }
 
 fn main() {

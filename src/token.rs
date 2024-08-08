@@ -108,7 +108,14 @@ impl Literal {
             Literal::Str(s)     => return s.as_str(),
             Literal::Id(_)               => return "Identifier",
             Literal::Keyword(s) => return s.as_str(),
-            Literal::Null               => return "Null",
+            Literal::Null                => return "Null",
+        }
+    }
+
+    pub fn is_null(&self) -> bool {
+        match self {
+            Literal::Null => true,
+            _ => false
         }
     }
 }
@@ -127,8 +134,11 @@ impl Token {
     }
 
     pub fn to_string(&self) -> String {
-        "Token => Type: ".to_owned() + self.token_type.to_string() + " Lexeme: " +
-        &self.lexeme + " Literal: " + self.literal.to_string() + " at Line: " + &self.line.to_string()
+        if self.literal.is_null() {
+            return format!("`{} ({})`", self.lexeme, self.token_type.to_string());
+        } else {
+            return format!("`{}, {}`", self.lexeme, self.literal.to_string());
+        }
     }
 
     pub fn get_lexeme(&self) -> &str {
@@ -137,10 +147,6 @@ impl Token {
 
     pub fn get_type(&self) -> TokenType {
         self.token_type.clone()
-    }
-
-    pub fn get_literal(&self) ->  Literal {
-        self.literal.clone()
     }
 
     pub fn get_line(&self) -> usize {

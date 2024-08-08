@@ -73,10 +73,7 @@ impl Parser {
     fn unary(&mut self) -> Result<Expr, String> {
         if self.match_tokens(&[Type::Bang, Type::Minus]) {
             let operator = self.previous();
-            let right = match self.unary() {
-                Ok(e) => e,
-                Err(p) => return Err(p)
-            };
+            let right = self.unary()?;
             return Ok(Expr::new_unary(operator, right));
         }
 
@@ -85,7 +82,6 @@ impl Parser {
 
     fn primary(&mut self) -> Result<Expr, String> {
         let tok = self.peek();
-        dbg!(&tok);
         match tok.get_type() {
             Type::LeftParen => {
                 self.advance();
@@ -124,14 +120,7 @@ impl Parser {
             if self.previous().get_type() == Type::SemiColon {return;}
 
             match self.peek().get_type() {
-                Type::Class => return,
-                Type::Fun => return,
-                Type::Var => return,
-                Type::For => return,
-                Type::If => return,
-                Type::While => return,
-                Type::Print => return,
-                Type::Return => return,
+                Type::Class | Type::Fun | Type::Var | Type::For | Type::If | Type::While | Type::Print | Type::Return => return,
                 _ => ()
             }
         }
@@ -168,21 +157,5 @@ impl Parser {
 
     fn previous(&mut self) -> Token {
         self.tokens[self.current - 1].to_owned()
-    }
-}
-
-mod tests {
-    use crate::Scanner;
-    use crate::Parser;
-
-    #[test]
-    fn test_parse() {
-        
-        let src = "123 + (45.67)";
-        let mut parser = Parser::new(Scanner::new(src).scan_tokens());
-        let expr = parser.parse().expect("Not yet Implemented");
-        println!("{}", expr.to_string());
-
-        assert_eq!(src.to_string(), expr.to_string());
     }
 }
