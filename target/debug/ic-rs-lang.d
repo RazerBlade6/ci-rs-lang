@@ -1,1 +1,0 @@
-/home/veda/Programming/ci-rs-lang/target/debug/ic-rs-lang: /home/veda/Programming/ci-rs-lang/src/expr.rs /home/veda/Programming/ci-rs-lang/src/main.rs /home/veda/Programming/ci-rs-lang/src/parser.rs /home/veda/Programming/ci-rs-lang/src/scanner.rs /home/veda/Programming/ci-rs-lang/src/token.rs
