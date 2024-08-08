@@ -24,17 +24,11 @@ impl Parser {
     }
     
     fn equality(&mut self) -> Result<Expr, String> {
-        let mut expr = match self.comparison() {
-            Ok(e) => e,
-            Err(p) => return Err(p)
-        };
+        let mut expr = self.comparison()?;
 
         while self.match_tokens(&[Type::BangEqual, Type::EqualEqual]) {
             let operator = self.previous();
-            let right = match self.comparison() {
-                Ok(e) => e,
-                Err(p) => return Err(p)
-            };
+            let right = self.comparison()?;
             expr = Expr::new_binary(expr, operator, right);
         }
 
@@ -42,17 +36,10 @@ impl Parser {
     }
 
     fn comparison(&mut self) -> Result<Expr, String> {
-        let mut expr = match self.term() {
-            Ok(e) => e,
-            Err(p) => return Err(p)
-        };
-
+        let mut expr = self.term()?;
         while self.match_tokens(&[Type::Greater, Type::GreaterEqual, Type::Less, Type::LessEqual]) {
             let operator = self.previous();
-            let right = match self.term() {
-                Ok(e) => e,
-                Err(p) => return Err(p)
-            };
+            let right = self.term()?;
             expr = Expr::new_binary(expr, operator, right);
         }
 
@@ -60,17 +47,11 @@ impl Parser {
     }
 
     fn term(&mut self) -> Result<Expr, String> {
-        let mut expr = match self.factor() {
-            Ok(e) => e,
-            Err(p) => return Err(p)
-        };
+        let mut expr = self.factor()?;
 
         while self.match_tokens(&[Type::Minus, Type::Plus]) {
             let operator = self.previous();
-            let right = match self.factor() {
-                Ok(e) => e,
-                Err(p) => return Err(p)
-            };
+            let right = self.factor()?;
             expr = Expr::new_binary(expr, operator, right);
         }
 
@@ -78,17 +59,11 @@ impl Parser {
     }
 
     fn factor(&mut self) -> Result<Expr, String> {
-        let mut expr = match self.unary() {
-            Ok(e) => e,
-            Err(p) => return Err(p)
-        };
+        let mut expr = self.unary()?;
 
         while self.match_tokens(&[Type::Slash, Type::Star]) {
             let operator = self.previous();
-            let right = match self.factor() {
-                Ok(e) => e,
-                Err(p) => return Err(p)
-            };
+            let right = self.factor()?;
             expr = Expr::new_binary(expr, operator, right);
         }
 
@@ -168,7 +143,7 @@ impl Parser {
         let token = self.peek();
         if token.get_type() == typ {self.advance(); Ok(token)}
         else {
-            Err(format!("Line {}: {}", self.peek().get_line(), msg))
+            Err(format!("Line {}: {}", self.peek().get_line(), msg).to_string())
         }
     }
 

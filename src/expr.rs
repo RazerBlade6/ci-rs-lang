@@ -43,7 +43,6 @@ pub enum Expr {
     Literal {literal: LitValue},
     Unary {operator: Token, right: Box<Expr>},
     Operator {token: Token},
-    Default
 }
 
 impl Expr {
@@ -64,9 +63,6 @@ impl Expr {
             Expr::Operator { token } => {
                 token.get_lexeme().to_string()
             },
-            Expr::Default => {
-                format!("You shouldn't be here")
-            }
         }
     }
 

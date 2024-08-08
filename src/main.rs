@@ -22,7 +22,7 @@ fn run_prompt() -> Result<(), String> {
 
     loop {
         let mut buffer = String::new();
-        print!(">>> ");
+        print!(r#">>>` "#);
         stdout.flush().unwrap();
 
         match stdin.read_line(&mut buffer) {
