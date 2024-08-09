@@ -19,7 +19,7 @@ impl LitValue {
     pub fn to_string(&self) -> String {
         match self {
             Number(n) => return format!("{:.5}", n),
-            Str(s) => return s.to_string(),
+            Str(s) => return s[1 .. s.len() - 1].to_string(),
             True => return String::from("true") ,
             False => return String::from("false"),
             Nil => return String::from("nil")

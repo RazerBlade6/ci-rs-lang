@@ -149,6 +149,15 @@ impl Token {
         self.token_type.clone()
     }
 
+    // // TODO: MAKE THIS GARBAGE SOLUTION BETTER AT SOME POINT
+
+    // pub fn get_literal(&self) -> String {
+    //     match &self.literal {
+    //         Literal::Str(literal) => literal.to_string(),
+    //         _ => panic!("Cannot access literal values")
+    //     }
+    // }
+
     pub fn get_line(&self) -> usize {
         self.line
     }

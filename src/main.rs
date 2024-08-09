@@ -64,10 +64,6 @@ fn run_file(path: &str) -> Result<(), String> {
 fn run(src: &str, interpreter: &mut Interpreter) -> Result<(), String> {
     let mut scanner: Scanner = Scanner::new(src);
     let tokens: Vec<Token> = scanner.scan_tokens();
-
-    for tok in &tokens {
-        dbg!(tok);
-    }
     let mut parser: Parser = Parser::new(tokens);
     let statements: Vec<Stmt> = parser.parse()?;
     interpreter.interpret(statements)?;

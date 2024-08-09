@@ -1,4 +1,4 @@
-use crate::{expr::{Expr, LitValue}, stmt::Stmt};
+use crate::stmt::Stmt;
 
 #[derive(Clone,)]
 pub struct Interpreter {
