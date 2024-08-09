@@ -1,4 +1,4 @@
-use crate::expr::{Expr, LitValue};
+use crate::{expr::{Expr, LitValue}, stmt::Stmt};
 
 #[derive(Clone,)]
 pub struct Interpreter {
@@ -10,7 +10,19 @@ impl Interpreter {
         Self {}
     }
 
-    pub fn interpret(&mut self, expr: Expr) -> Result<LitValue, String> {
-        expr.evaluate()
-    }
+    pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result <(), String> {
+        for statement in statements {
+            match statement {
+                Stmt::Expression { expr } => {
+                    expr.evaluate()?;
+                },
+                Stmt::Print { expr } => {
+                    let result = expr.evaluate()?;
+                    println!("{}", result.to_string());
+                }
+            };
+        }
+
+        return Ok(())
+    } 
 }

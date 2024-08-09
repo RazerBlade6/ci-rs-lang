@@ -12,7 +12,7 @@ use scanner::Scanner;
 use stmt::Stmt;
 use token::*;
 use parser::*;
-use expr::{Expr, LitValue};
+// use expr::{Expr, LitValue};
 
 fn run_prompt() -> Result<(), String> {
     let esc_key = match env::consts::OS {
@@ -46,7 +46,10 @@ fn run_prompt() -> Result<(), String> {
             continue;
         }
 
-        run(buffer.trim(), &mut interpreter);
+        match run(buffer.trim(), &mut interpreter) {
+            Ok(_) => (),
+            Err(msg) => println!("\nERROR:\n{msg}\n")
+        };
     }
 }
 
@@ -61,16 +64,13 @@ fn run_file(path: &str) -> Result<(), String> {
 fn run(src: &str, interpreter: &mut Interpreter) -> Result<(), String> {
     let mut scanner: Scanner = Scanner::new(src);
     let tokens: Vec<Token> = scanner.scan_tokens();
-    let mut parser: Parser = Parser::new(tokens);
-    let statements: Vec<Stmt> = parser.parse().unwrap();
-    for statement in statements {
-        match statement {
-            Stmt::Expression { expr } => {interpreter.interpret(expr)?;},
-            _ => todo!()
-        }
-    }
-    println!("Result is: {}", result.to_string());
 
+    for tok in &tokens {
+        dbg!(tok);
+    }
+    let mut parser: Parser = Parser::new(tokens);
+    let statements: Vec<Stmt> = parser.parse()?;
+    interpreter.interpret(statements)?;
     Ok(())
 }
 

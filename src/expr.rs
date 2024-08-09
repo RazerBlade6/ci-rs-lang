@@ -188,4 +188,11 @@ mod tests {
         let result = expr1.evaluate().unwrap();
         assert_eq!(soln, result);
     }
+
+    #[test]
+    fn test_stringify() {
+        let token = Token::new(TokenType::String, "Hello World", Literal::Str("Hello World".to_string()), 1);
+        let literal_value = LitValue::from_token(token);
+        println!("{}", literal_value.to_string());
+    }
 }

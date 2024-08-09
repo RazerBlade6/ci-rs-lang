@@ -6,7 +6,6 @@ pub struct Parser {
     current: usize
 }
 
-
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
         Self {tokens, current: 0}
@@ -33,21 +32,21 @@ impl Parser {
 
     fn statement(&mut self) -> Result<Stmt, String> {
         if self.match_tokens(&[TokenType::Print]) {
-            return Ok(self.print_statement()?);
-        }
+            return self.print_statement();
+        } 
 
-        Ok(self.expr_statement()?)
+        self.expr_statement()
     }
 
     fn print_statement(&mut self) -> Result<Stmt, String> {
         let expr: Expr = self.expression()?;
-        self.consume(TokenType::SemiColon, "Expected ';' after value");
+        self.consume(TokenType::SemiColon, "Expected ';' after value")?;
         Ok(Stmt::Print { expr })
     }
 
     fn expr_statement(&mut self) -> Result<Stmt, String> {
         let expr = self.expression()?;
-        self.consume(TokenType::SemiColon, "Expected ';' after expression");
+        self.consume(TokenType::SemiColon, "Expected ';' after expression")?;
         Ok(Stmt::Expression { expr })
     }
 
