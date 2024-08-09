@@ -2,10 +2,14 @@
 mod token;
 mod scanner;
 mod expr;
+mod interpreter;
 mod parser;
+mod stmt;
 
-use std::{env, io::{self, BufRead, Write}, process::{exit, Command}};
+use std::{env, fs, io::{self, BufRead, Write}, process::exit};
+use interpreter::Interpreter;
 use scanner::Scanner;
+use stmt::Stmt;
 use token::*;
 use parser::*;
 use expr::{Expr, LitValue};
@@ -19,6 +23,8 @@ fn run_prompt() -> Result<(), String> {
 
     let mut stdin: io::StdinLock<'static> = io::stdin().lock();
     let mut stdout: io::StdoutLock<'static> = io::stdout().lock();
+
+    let mut interpreter: Interpreter = Interpreter::new();
 
     loop {
         let mut buffer = String::new();
@@ -40,35 +46,36 @@ fn run_prompt() -> Result<(), String> {
             continue;
         }
 
-        if &buffer[0..4] == "sys." {
-            Command::new("powershell")
-                .arg(&buffer[4..].trim())
-                .spawn()
-                .unwrap()
-                .wait()
-                .expect("Failed to wait");
-        } else {
-            run(buffer.trim());
-        }
+        run(buffer.trim(), &mut interpreter);
     }
 }
 
-fn run_file(_src: &str) -> Result<(), String> {
-    todo!("Ability to read files will be added in future DLC for only $99.99!")
+fn run_file(path: &str) -> Result<(), String> {
+    let mut interpreter = Interpreter::new();
+    match fs::read_to_string(path) {
+        Ok(src) => run(&src, &mut interpreter),
+        Err(msg) => return Err(msg.to_string())
+    }
 }
 
-fn run(src: &str) {
+fn run(src: &str, interpreter: &mut Interpreter) -> Result<(), String> {
     let mut scanner: Scanner = Scanner::new(src);
     let tokens: Vec<Token> = scanner.scan_tokens();
     let mut parser: Parser = Parser::new(tokens);
-    let expr: Expr = parser.parse().unwrap();
-    let result: LitValue = expr.evaluate().unwrap();
-    println!("Result is: {}", result.to_string())
+    let statements: Vec<Stmt> = parser.parse().unwrap();
+    for statement in statements {
+        match statement {
+            Stmt::Expression { expr } => {interpreter.interpret(expr)?;},
+            _ => todo!()
+        }
+    }
+    println!("Result is: {}", result.to_string());
+
+    Ok(())
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-
 
     match args.len() {
         1 => match run_prompt() {

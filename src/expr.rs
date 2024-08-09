@@ -4,7 +4,7 @@ use std::{fmt::format};
 
 use crate::token::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum LitValue {
     Number(f64),
     Str(String),
@@ -18,7 +18,7 @@ use LitValue::*;
 impl LitValue {
     pub fn to_string(&self) -> String {
         match self {
-            Number(n) => return format!("{n}"),
+            Number(n) => return format!("{:.5}", n),
             Str(s) => return s.to_string(),
             True => return String::from("true") ,
             False => return String::from("false"),
@@ -156,21 +156,12 @@ impl Expr {
 
             (Number(x), TokenType::LessEqual, Number(y)) => if x <= y {return Ok(True);} else {return Ok(False);},
 
-            // (any_x, TokenType::EqualEqual, any_y) => if equal(any_x.clone(), any_y.clone()) {return Ok(True)} else {return Ok(False)},
+            (x, TokenType::EqualEqual,y) => if x == y {return Ok(True);} else {return Ok(False);},
 
-            (Number(x), TokenType::EqualEqual, Number(y)) => if x == y {return Ok(True);} else {return Ok(False);},
-
-            (Number(x), TokenType::BangEqual, Number(y)) => if x != y {return Ok(True);} else {return Ok(False);},
+            (x, TokenType::BangEqual, y) => if x != y {return Ok(True);} else {return Ok(False);},
 
             _ => return Err(format!("{} not implemented between {} and {}", operator.to_string(), left.to_string(), right.to_string()))
         }
-
-        // fn equal(any_x: LitValue, any_y: LitValue) -> bool {
-        //     if any_x.is_nil() && any_y.is_nil() {return true;}
-        //     if any_x.is_nil() {return false;}
-
-        //     return any_x.
-        // }
     }
 }
 
@@ -184,11 +175,8 @@ mod tests {
 
     #[test]
     fn test_to_string() {
-        
         let soln1 = String::from("-123 * (45.67)");
-
         let expr1 = Expr::Binary { left: Box::new(Expr::Unary { operator: Token::new(TokenType::Minus, "-", Literal::Null, 1), right: (Box::new(Expr::Literal { literal: Number(123.0)}))}), operator: Token::new(TokenType::Star, "*", Literal::Null, 1), right: Box::new(Expr::Grouping { expr: Box::new(Expr::Literal { literal: Number(45.67)})})};
-
         let res1 = expr1.to_string();
         assert_eq!(res1, soln1);
     }
@@ -196,8 +184,8 @@ mod tests {
     #[test]
     fn test_evaluate() {
         let expr1 = Expr::Binary { left: Box::new(Expr::Unary { operator: Token::new(TokenType::Minus, "-", Literal::Null, 1), right: (Box::new(Expr::Literal { literal: Number(123.0)}))}), operator: Token::new(TokenType::Star, "*", Literal::Null, 1), right: Box::new(Expr::Grouping { expr: Box::new(Expr::Literal { literal: Number(45.67)})})};
-        let soln = 5617.41;
+        let soln = LitValue::Number(-5617.41);
         let result = expr1.evaluate().unwrap();
-        println!("{}", result.to_string());
+        assert_eq!(soln, result);
     }
 }
