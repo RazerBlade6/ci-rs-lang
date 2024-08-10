@@ -26,51 +26,20 @@
 #[derive(Clone, PartialEq, Debug, Copy)]
 pub enum TokenType {
     // Single-character tokens.
-    LeftParen,
-    RightParen,
-    LeftBrace,
-    RightBrace,
-    Comma,
-    Dot,
-    Minus,
-    Plus,
-    SemiColon,
-    Slash,
-    Star,
+    LeftParen, RightParen, LeftBrace, RightBrace, Comma, 
+    Dot, Minus, Plus, SemiColon, Slash, Star,
 
     // One or two character tokens
-    Bang,
-    BangEqual,
-    Equal,
-    EqualEqual,
-    Greater,
-    GreaterEqual,
-    Less,
-    LessEqual,
+    Bang, BangEqual, Equal, EqualEqual, Greater, GreaterEqual, Less, LessEqual,
 
     // Literals
-    Identifier,
-    String,
-    Number,
+    Identifier, String, Number,
 
     // Keywords.
-    And,
-    Class,
-    Else,
-    False,
-    Fun,
-    For,
-    If,
-    Nil,
-    Or,
-    Print,
-    Return,
-    Super,
-    This,
-    True,
-    Var,
-    While,
+    And, Class, Else, False, Fun, For, If, Nil,
+    Or, Print, Return, Super, This, True, Var, While,
 
+    // End of File
     Eof,
 }
 
@@ -182,14 +151,9 @@ impl Token {
         self.token_type.clone()
     }
 
-    // // TODO: MAKE THIS GARBAGE SOLUTION BETTER AT SOME POINT
-
-    // pub fn get_literal(&self) -> String {
-    //     match &self.literal {
-    //         Literal::Str(literal) => literal.to_string(),
-    //         _ => panic!("Cannot access literal values")
-    //     }
-    // }
+    pub fn get_literal(&self) -> Literal{
+        return self.literal.clone()
+    }
 
     pub fn get_line(&self) -> usize {
         self.line

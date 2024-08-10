@@ -4,7 +4,9 @@ mod parser;
 mod scanner;
 mod stmt;
 mod token;
+mod environment;
 
+use environment::Environment;
 use interpreter::Interpreter;
 use parser::*;
 use scanner::Scanner;
@@ -26,8 +28,7 @@ fn run_prompt() -> Result<(), String> {
 
     let mut stdin: io::StdinLock<'static> = io::stdin().lock();
     let mut stdout: io::StdoutLock<'static> = io::stdout().lock();
-
-    let mut interpreter: Interpreter = Interpreter::new();
+    let mut interpreter: Interpreter = Interpreter::new(Environment::new());
 
     loop {
         let mut buffer = String::new();
@@ -57,7 +58,7 @@ fn run_prompt() -> Result<(), String> {
 }
 
 fn run_file(path: &str) -> Result<(), String> {
-    let mut interpreter = Interpreter::new();
+    let mut interpreter = Interpreter::new(Environment::new());
     match fs::read_to_string(path) {
         Ok(src) => run(&src, &mut interpreter),
         Err(msg) => return Err(msg.to_string()),

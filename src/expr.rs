@@ -1,8 +1,7 @@
 #![allow(unused, unused_variables)]
-
 use std::fmt::format;
-
-use crate::token::*;
+use crate::{environment, token::*};
+use crate::environment::Environment;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum LitValue {
@@ -19,7 +18,7 @@ impl LitValue {
     pub fn to_string(&self) -> String {
         match self {
             Number(n) => return format!("{:.5}", n),
-            Str(s) => return s[1..s.len() - 1].to_string(),
+            Str(s) => return s.to_string(),
             True => return String::from("true"),
             False => return String::from("false"),
             Nil => return String::from("nil"),
@@ -32,7 +31,6 @@ impl LitValue {
                 Ok(f) => f,
                 Err(_) => panic!("Could not parse as Number"),
             }),
-
             TokenType::String => Self::Str(token.get_lexeme().to_string()),
             TokenType::Identifier => Self::Str(token.get_lexeme().to_string()),
             TokenType::True => True,
@@ -90,6 +88,9 @@ pub enum Expr {
     Operator {
         token: Token,
     },
+    Variable {
+        name: Token
+    }
 }
 
 impl Expr {
@@ -100,12 +101,8 @@ impl Expr {
                 operator,
                 right,
             } => {
-                format!(
-                    "{} {} {}",
-                    operator.get_lexeme(),
-                    (*left).to_string(),
-                    (*right).to_string()
-                )
+                format!("{} {} {}", operator.get_lexeme(), (*left).to_string(), (*right).to_string()
+)
             }
             Expr::Grouping { expr } => {
                 format!("({})", (*expr).to_string())
@@ -117,6 +114,8 @@ impl Expr {
                 format!("{}{}", operator.get_lexeme(), (*right).to_string())
             }
             Expr::Operator { token } => token.get_lexeme().to_string(),
+
+            Expr::Variable { name } => name.get_lexeme().to_string()
         }
     }
 
@@ -149,110 +148,65 @@ impl Expr {
         Self::Operator { token }
     }
 
-    pub fn evaluate(&self) -> Result<LitValue, String> {
+    pub fn new_variable(name: Token) -> Self {
+        Self::Variable { name }
+    }
+ 
+    pub fn evaluate(&self, environment: &mut Environment) -> Result<LitValue, String> {
         match self {
             Expr::Literal { literal } => Ok((*literal).clone()),
-            Expr::Grouping { expr } => (*expr).evaluate(),
-            Expr::Unary { operator, right } => Self::evaluate_unary(operator.clone(), right),
-            Expr::Binary {
-                left,
-                operator,
-                right,
-            } => Self::evaluate_binary(left, operator.clone(), right),
+            Expr::Grouping { expr } => (*expr).evaluate(environment),
+            Expr::Unary { operator, right } => Self::evaluate_unary(environment, operator.clone(), right ),
+            Expr::Binary {left, operator, right} 
+            => Self::evaluate_binary(environment, left, operator.clone(), right),
+            Expr::Variable { name } => {
+                environment.get(name.clone())
+            }
             _ => return Err(format!("Raw operators are not supported")),
         }
     }
 
-    fn evaluate_unary(operator: Token, right: &Box<Expr>) -> Result<LitValue, String> {
-        let right = (*right).evaluate()?;
+    fn evaluate_unary(environment: &mut Environment, operator: Token, right: &Box<Expr>) -> Result<LitValue, String> {
+        let right = (*right).evaluate(environment)?;
 
         match (&right, operator.get_type()) {
             (Number(x), TokenType::Minus) => return Ok(Number(-x)),
             (_, TokenType::Minus) => {
-                return Err(format!(
-                    "negation not implemented for {}",
-                    right.to_string()
-                ))
+                return Err(format!("negation not implemented for {}", right.to_string()))
             }
             (any, TokenType::Bang) => Ok(any.is_falsy()),
             _ => todo!(),
         }
     }
 
-    fn evaluate_binary(
-        left: &Box<Expr>,
-        operator: Token,
-        right: &Box<Expr>,
-    ) -> Result<LitValue, String> {
-        let left = (*left).evaluate()?;
-        let right = (*right).evaluate()?;
+    fn evaluate_binary(environment: &mut Environment, left: &Box<Expr>, operator: Token, right: &Box<Expr>) -> Result<LitValue, String> {
+        let left = (*left).evaluate(environment)?;
+        let right = (*right).evaluate(environment)?;
 
         match (&left, operator.get_type(), &right) {
-            (Number(x), TokenType::Minus, Number(y)) => return Ok(Number(x - y)),
+            (Number(x), TokenType::Minus, Number(y)) => Ok(Number(x - y)),
 
-            (Number(x), TokenType::Star, Number(y)) => return Ok(Number(x * y)),
+            (Number(x), TokenType::Star, Number(y)) => Ok(Number(x * y)),
 
-            (Number(x), TokenType::Slash, Number(y)) => return Ok(Number(x / y)),
+            (Number(x), TokenType::Slash, Number(y)) => Ok(Number(x / y)),
 
-            (Number(x), TokenType::Plus, Number(y)) => return Ok(Number(x + y)),
+            (Number(x), TokenType::Plus, Number(y)) => Ok(Number(x + y)),
 
-            (Str(s1), TokenType::Plus, Str(s2)) => return Ok(Str(s1.to_owned() + s2)),
+            (Str(s1), TokenType::Plus, Str(s2)) => Ok(Str(s1.to_owned() + s2)),
 
-            (Number(x), TokenType::Greater, Number(y)) => {
-                if x > y {
-                    return Ok(True);
-                } else {
-                    return Ok(False);
-                }
-            }
+            (Number(x), TokenType::Greater, Number(y)) => { if x > y { Ok(True) } else { Ok(False)}}
 
-            (Number(x), TokenType::GreaterEqual, Number(y)) => {
-                if x >= y {
-                    return Ok(True);
-                } else {
-                    return Ok(False);
-                }
-            }
+            (Number(x), TokenType::GreaterEqual, Number(y)) => { if x >= y { Ok(True) } else { Ok(False) }}
 
-            (Number(x), TokenType::Less, Number(y)) => {
-                if x < y {
-                    return Ok(True);
-                } else {
-                    return Ok(False);
-                }
-            }
+            (Number(x), TokenType::Less, Number(y)) => { if x < y { Ok(True) } else { Ok(False) }}
 
-            (Number(x), TokenType::LessEqual, Number(y)) => {
-                if x <= y {
-                    return Ok(True);
-                } else {
-                    return Ok(False);
-                }
-            }
+            (Number(x), TokenType::LessEqual, Number(y)) => {if x <= y {  Ok(True) } else { Ok(False) }}
 
-            (x, TokenType::EqualEqual, y) => {
-                if x == y {
-                    return Ok(True);
-                } else {
-                    return Ok(False);
-                }
-            }
+            (x, TokenType::EqualEqual, y) => { if x == y { Ok(True) } else { Ok(False) }}
 
-            (x, TokenType::BangEqual, y) => {
-                if x != y {
-                    return Ok(True);
-                } else {
-                    return Ok(False);
-                }
-            }
+            (x, TokenType::BangEqual, y) => { if x != y { Ok(True) } else { Ok(False) }}
 
-            _ => {
-                return Err(format!(
-                    "{} not implemented between {} and {}",
-                    operator.to_string(),
-                    left.to_string(),
-                    right.to_string()
-                ))
+            _ => {Err(format!("{} not implemented between {} and {}", operator.to_string(), left.to_string(), right.to_string()))
             }
         }
     }
@@ -268,20 +222,7 @@ mod tests {
     #[test]
     fn test_to_string() {
         let soln1 = String::from("-123 * (45.67)");
-        let expr1 = Expr::Binary {
-            left: Box::new(Expr::Unary {
-                operator: Token::new(TokenType::Minus, "-", Literal::Null, 1),
-                right: (Box::new(Expr::Literal {
-                    literal: Number(123.0),
-                })),
-            }),
-            operator: Token::new(TokenType::Star, "*", Literal::Null, 1),
-            right: Box::new(Expr::Grouping {
-                expr: Box::new(Expr::Literal {
-                    literal: Number(45.67),
-                }),
-            }),
-        };
+        let expr1 = Expr::Binary { left: Box::new(Expr::Unary { operator: Token::new(TokenType::Minus, "-", Literal::Null, 1), right: (Box::new(Expr::Literal {literal: Number(123.0),})),}), operator: Token::new(TokenType::Star, "*", Literal::Null, 1), right: Box::new(Expr::Grouping { expr: Box::new(Expr::Literal { literal: Number(45.67), }),}),};        
         let res1 = expr1.to_string();
         assert_eq!(res1, soln1);
     }
@@ -303,7 +244,7 @@ mod tests {
             }),
         };
         let soln = LitValue::Number(-5617.41);
-        let result = expr1.evaluate().unwrap();
+        let result = expr1.evaluate(&mut Environment::new()).unwrap();
         assert_eq!(soln, result);
     }
 

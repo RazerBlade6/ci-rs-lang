@@ -178,6 +178,10 @@ impl Scanner {
             .push(Token::new(token_type, text, literal, self.line));
     }
 
+    fn add_token_s(&mut self, token_type: Type, literal: Literal, text: &str) {
+        self.tokens.push(Token::new(token_type, text, literal, self.line))
+    }
+
     fn number(&mut self) {
         while self.peek(0).is_ascii_digit() {
             self.advance();
@@ -201,8 +205,6 @@ impl Scanner {
     }
 
     fn peek(&self, n: usize) -> char {
-        // if self.current + n >= self.src.len() { return '\0'}
-        // return self.src.chars().nth(self.current + n).unwrap()
         match self.src.chars().nth(self.current + n) {
             Some(c) => c,
             None => '\0',
@@ -222,8 +224,8 @@ impl Scanner {
 
         self.advance();
 
-        let literal = self.src[self.start + 1..self.current - 1].to_string();
-        self.add_token(Type::String, Literal::Str(literal));
+        let text = self.src[self.start + 1..self.current - 1].to_string();
+        self.add_token_s(Type::String, Literal::Str(text.to_string()), &text);
     }
 
     fn identifier(&mut self) {

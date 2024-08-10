@@ -16,8 +16,7 @@ impl Parser {
         let mut errors: Vec<String> = Vec::new();
 
         while !self.is_at_end() {
-            let statement = self.statement();
-            match statement {
+            match self.declaration() {
                 Ok(statement) => statements.push(statement),
                 Err(error) => errors.push(error),
             }
@@ -28,6 +27,34 @@ impl Parser {
         } else {
             Err(errors.join("\n"))
         }
+    }
+
+    fn declaration(&mut self) -> Result<Stmt, String> {
+        let result = if self.match_tokens(&[TokenType::Var]) {
+            self.var_declaration()
+        } else {
+            self.statement()
+        };
+
+        match result {
+            Ok(statement) => Ok(statement),
+            Err(msg) => {
+                self.synchronise();
+                Err(msg)
+            }
+        }
+    }
+
+    fn var_declaration(&mut self) -> Result<Stmt, String> {
+        let name: Token = self.consume(TokenType::Identifier, "Expected variable name")?;
+        let mut initializer: Option<Expr> = None;
+        if self.match_tokens(&[TokenType::Equal]) {
+            initializer = Some(self.expression()?);
+        }
+
+        self.consume(TokenType::SemiColon, "Expected ';' after variable declaration")?;
+    
+        Ok(Stmt::Var { name , initializer })
     }
 
     fn statement(&mut self) -> Result<Stmt, String> {
@@ -135,7 +162,7 @@ impl Parser {
             }
             TokenType::Identifier => {
                 self.advance();
-                return Ok(Expr::new_literal(LitValue::from_token(tok)));
+                return Ok(Expr::new_variable(self.previous()));
             }
             _ => return Err(String::from("Expected Expression")),
         }
@@ -152,7 +179,7 @@ impl Parser {
 
         false
     }
-    #[allow(dead_code)]
+
     fn synchronise(&mut self) {
         self.advance();
 
