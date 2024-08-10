@@ -30,6 +30,9 @@ impl Interpreter {
 
                     self.environment.define(name.get_lexeme().to_string(), value)
                 }
+                Stmt::Block { statements } => {
+                    todo!("")
+                }
             };
         }
 

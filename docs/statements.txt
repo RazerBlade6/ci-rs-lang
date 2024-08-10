@@ -6,7 +6,8 @@ declaration    → varDecl
                
 
 statement      → exprStmt
-               | printStmt ;
+               | printStmt
+               | block ;
 
 primary        → "true" | "false" | "nil"
                | NUMBER | STRING
@@ -16,3 +17,4 @@ primary        → "true" | "false" | "nil"
 exprStmt       → expression ";" ;
 printStmt      → "print" expression ";" ;
 varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
+block          → "{" declaration* "}" ;
