@@ -1,14 +1,14 @@
-use crate::{ expr::*, Token, TokenType};
 use crate::stmt::Stmt;
+use crate::{expr::*, Token, TokenType};
 
 pub struct Parser {
     tokens: Vec<Token>,
-    current: usize
+    current: usize,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self {tokens, current: 0}
+        Self { tokens, current: 0 }
     }
 
     pub fn parse(&mut self) -> Result<Vec<Stmt>, String> {
@@ -19,7 +19,7 @@ impl Parser {
             let statement = self.statement();
             match statement {
                 Ok(statement) => statements.push(statement),
-                Err(error) => errors.push(error)
+                Err(error) => errors.push(error),
             }
         }
 
@@ -33,7 +33,7 @@ impl Parser {
     fn statement(&mut self) -> Result<Stmt, String> {
         if self.match_tokens(&[TokenType::Print]) {
             return self.print_statement();
-        } 
+        }
 
         self.expr_statement()
     }
@@ -53,7 +53,7 @@ impl Parser {
     fn expression(&mut self) -> Result<Expr, String> {
         self.equality()
     }
-    
+
     fn equality(&mut self) -> Result<Expr, String> {
         let mut expr = self.comparison()?;
 
@@ -68,7 +68,12 @@ impl Parser {
 
     fn comparison(&mut self) -> Result<Expr, String> {
         let mut expr = self.term()?;
-        while self.match_tokens(&[TokenType::Greater, TokenType::GreaterEqual, TokenType::Less, TokenType::LessEqual]) {
+        while self.match_tokens(&[
+            TokenType::Greater,
+            TokenType::GreaterEqual,
+            TokenType::Less,
+            TokenType::LessEqual,
+        ]) {
             let operator = self.previous();
             let right = self.term()?;
             expr = Expr::new_binary(expr, operator, right);
@@ -118,24 +123,28 @@ impl Parser {
                 self.advance();
                 let expr = self.expression()?;
                 let _ = self.consume(TokenType::RightParen, "Expected `)`");
-                return Ok(Expr::new_grouping(expr))
-            },
-            TokenType::False | TokenType::True | TokenType::Nil | TokenType::Number | TokenType::String => {
+                return Ok(Expr::new_grouping(expr));
+            }
+            TokenType::False
+            | TokenType::True
+            | TokenType::Nil
+            | TokenType::Number
+            | TokenType::String => {
                 self.advance();
-                return Ok(Expr::new_literal(LitValue::from_token(tok)))
-            },
+                return Ok(Expr::new_literal(LitValue::from_token(tok)));
+            }
             TokenType::Identifier => {
                 self.advance();
-                return Ok(Expr::new_literal(LitValue::from_token(tok)))
+                return Ok(Expr::new_literal(LitValue::from_token(tok)));
             }
-            _ => return Err(String::from("Expected Expression"))
+            _ => return Err(String::from("Expected Expression")),
         }
     }
 
     fn match_tokens(&mut self, types: &[TokenType]) -> bool {
         for typ in types {
             if !self.check(typ.clone()) {
-               continue; 
+                continue;
             }
             self.advance();
             return true;
@@ -148,11 +157,20 @@ impl Parser {
         self.advance();
 
         while !self.is_at_end() {
-            if self.previous().get_type() == TokenType::SemiColon {return;}
+            if self.previous().get_type() == TokenType::SemiColon {
+                return;
+            }
 
             match self.peek().get_type() {
-                TokenType::Class | TokenType::Fun | TokenType::Var | TokenType::For | TokenType::If | TokenType::While | TokenType::Print | TokenType::Return => return,
-                _ => ()
+                TokenType::Class
+                | TokenType::Fun
+                | TokenType::Var
+                | TokenType::For
+                | TokenType::If
+                | TokenType::While
+                | TokenType::Print
+                | TokenType::Return => return,
+                _ => (),
             }
         }
 
@@ -161,19 +179,25 @@ impl Parser {
 
     fn consume(&mut self, typ: TokenType, msg: &'static str) -> Result<Token, String> {
         let token = self.peek();
-        if token.get_type() == typ {self.advance(); Ok(token)}
-        else {
+        if token.get_type() == typ {
+            self.advance();
+            Ok(token)
+        } else {
             Err(format!("Line {}: {}", self.peek().get_line(), msg).to_string())
         }
     }
 
     fn advance(&mut self) -> Token {
-        if !self.is_at_end() {self.current += 1}
+        if !self.is_at_end() {
+            self.current += 1
+        }
         self.previous()
     }
 
     fn check(&mut self, typ: TokenType) -> bool {
-        if self.is_at_end() {return false}
+        if self.is_at_end() {
+            return false;
+        }
 
         self.peek().get_type() == typ
     }

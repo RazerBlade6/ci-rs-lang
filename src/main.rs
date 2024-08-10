@@ -1,23 +1,26 @@
-
-mod token;
-mod scanner;
 mod expr;
 mod interpreter;
 mod parser;
+mod scanner;
 mod stmt;
+mod token;
 
-use std::{env, fs, io::{self, BufRead, Write}, process::exit};
 use interpreter::Interpreter;
+use parser::*;
 use scanner::Scanner;
+use std::{
+    env, fs,
+    io::{self, BufRead, Write},
+    process::exit,
+};
 use stmt::Stmt;
 use token::*;
-use parser::*;
 // use expr::{Expr, LitValue};
 
 fn run_prompt() -> Result<(), String> {
     let esc_key = match env::consts::OS {
         "windows" => "CTRL + Z",
-        _ => "CTRL + D"
+        _ => "CTRL + D",
     };
     println!("Welcome to the Lox Interpreter!\nPress {} to exit", esc_key);
 
@@ -48,7 +51,7 @@ fn run_prompt() -> Result<(), String> {
 
         match run(buffer.trim(), &mut interpreter) {
             Ok(_) => (),
-            Err(msg) => println!("\nERROR:\n{msg}\n")
+            Err(msg) => println!("\nERROR:\n{msg}\n"),
         };
     }
 }
@@ -57,7 +60,7 @@ fn run_file(path: &str) -> Result<(), String> {
     let mut interpreter = Interpreter::new();
     match fs::read_to_string(path) {
         Ok(src) => run(&src, &mut interpreter),
-        Err(msg) => return Err(msg.to_string())
+        Err(msg) => return Err(msg.to_string()),
     }
 }
 

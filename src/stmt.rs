@@ -1,8 +1,8 @@
 use crate::expr::Expr;
 
 pub enum Stmt {
-    Expression {expr: Expr},
-    Print {expr: Expr},
+    Expression { expr: Expr },
+    Print { expr: Expr },
 }
 
 impl Stmt {
@@ -11,8 +11,8 @@ impl Stmt {
         use Stmt::*;
 
         match self {
-            Expression {expr} => expr.to_string(),
-            Print {expr} => format!("(print {})", expr.to_string()) 
+            Expression { expr } => expr.to_string(),
+            Print { expr } => format!("(print {})", expr.to_string()),
         }
     }
 }
