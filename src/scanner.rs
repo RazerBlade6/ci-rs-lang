@@ -66,22 +66,22 @@ impl Scanner {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Vec<Token> {
+    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, String> {
         while !self.at_end() {
             self.start = self.current;
-            self.scan_token();
+            self.scan_token()?;
         }
 
         let eof_token = Token::new(Type::Eof, "", Literal::Null, self.line);
         self.tokens.push(eof_token);
-        self.tokens.clone()
+        Ok(self.tokens.clone())
     }
 
     fn at_end(&self) -> bool {
         self.current >= self.src.len()
     }
 
-    fn scan_token(&mut self) {
+    fn scan_token(&mut self) -> Result<(), String> {
         let c = self.advance();
         match c {
             '(' => self.add_token_t(Type::LeftParen),
@@ -143,10 +143,12 @@ impl Scanner {
                 } else if c.is_ascii_alphabetic() || c == '_' {
                     self.identifier();
                 } else {
-                    self.error("", "Unexpected Character {c}")
+                    return Err(format!("Unexpected character: {c}"));
                 }
             }
         }
+
+        Ok(())
     }
 
     fn advance(&mut self) -> char {
@@ -258,13 +260,21 @@ impl Scanner {
 
 #[cfg(test)]
 mod tests {
+    use std::process::exit;
+
     use crate::scanner::*;
 
     #[test]
     fn test_scanner() {
         let src = "123 + 45.67";
         let mut scanner: Scanner = Scanner::new(src);
-        let tokens = scanner.scan_tokens();
+        let tokens = match scanner.scan_tokens() {
+            Ok(tokens) => tokens,
+            Err(msg) => {
+                println!("ERROR:\n{msg}");
+                exit(1)
+            }
+        };
 
         assert_eq!(
             vec![

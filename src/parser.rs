@@ -78,7 +78,25 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expr, String> {
-        self.equality()
+        self.assigment()
+    }
+
+    fn assigment(&mut self) -> Result<Expr, String> {
+        let expr = self.equality()?;
+
+        if self.match_tokens(&[TokenType::Equal]) {
+            let equals = self.previous();
+            let value = self.assigment()?;
+
+            let name = match &expr {
+                Expr::Variable { name } => name.clone(),
+                _ => return Err(format!("Invalid assignment target {}", equals.to_string()))
+            };
+
+            return Ok(Expr::create_assigment(name, value))
+        }
+
+        return Ok(expr)
     }
 
     fn equality(&mut self) -> Result<Expr, String> {
@@ -87,7 +105,7 @@ impl Parser {
         while self.match_tokens(&[TokenType::BangEqual, TokenType::EqualEqual]) {
             let operator = self.previous();
             let right = self.comparison()?;
-            expr = Expr::new_binary(expr, operator, right);
+            expr = Expr::create_binary(expr, operator, right);
         }
 
         Ok(expr)
@@ -103,7 +121,7 @@ impl Parser {
         ]) {
             let operator = self.previous();
             let right = self.term()?;
-            expr = Expr::new_binary(expr, operator, right);
+            expr = Expr::create_binary(expr, operator, right);
         }
 
         Ok(expr)
@@ -115,7 +133,7 @@ impl Parser {
         while self.match_tokens(&[TokenType::Minus, TokenType::Plus]) {
             let operator = self.previous();
             let right = self.factor()?;
-            expr = Expr::new_binary(expr, operator, right);
+            expr = Expr::create_binary(expr, operator, right);
         }
 
         Ok(expr)
@@ -127,7 +145,7 @@ impl Parser {
         while self.match_tokens(&[TokenType::Slash, TokenType::Star]) {
             let operator = self.previous();
             let right = self.factor()?;
-            expr = Expr::new_binary(expr, operator, right);
+            expr = Expr::create_binary(expr, operator, right);
         }
 
         Ok(expr)
@@ -137,7 +155,7 @@ impl Parser {
         if self.match_tokens(&[TokenType::Bang, TokenType::Minus]) {
             let operator = self.previous();
             let right = self.unary()?;
-            return Ok(Expr::new_unary(operator, right));
+            return Ok(Expr::create_unary(operator, right));
         }
 
         self.primary()
@@ -150,7 +168,7 @@ impl Parser {
                 self.advance();
                 let expr = self.expression()?;
                 let _ = self.consume(TokenType::RightParen, "Expected `)`");
-                return Ok(Expr::new_grouping(expr));
+                return Ok(Expr::create_grouping(expr));
             }
             TokenType::False
             | TokenType::True
@@ -158,11 +176,11 @@ impl Parser {
             | TokenType::Number
             | TokenType::String => {
                 self.advance();
-                return Ok(Expr::new_literal(LitValue::from_token(tok)));
+                return Ok(Expr::create_literal(LitValue::from_token(tok)));
             }
             TokenType::Identifier => {
                 self.advance();
-                return Ok(Expr::new_variable(self.previous()));
+                return Ok(Expr::create_variable(self.previous()));
             }
             _ => return Err(String::from("Expected Expression")),
         }

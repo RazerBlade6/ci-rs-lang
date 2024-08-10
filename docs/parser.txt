@@ -2,6 +2,9 @@ expression     → literal
                | unary
                | binary
                | grouping ;
+expression     → assignment ;
+assignment     → IDENTIFIER "=" assignment
+               | equality ;
 
 literal        → NUMBER | STRING | "true" | "false" | "nil" ;
 grouping       → "(" expression ")" ;

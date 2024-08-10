@@ -8,8 +8,8 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
-    pub fn new(environment: Environment) -> Self {
-        Self {environment}
+    pub fn new() -> Self {
+        Self {environment: Environment::new()}
     }
 
     pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<(), String> {

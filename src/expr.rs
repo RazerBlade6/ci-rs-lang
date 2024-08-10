@@ -90,6 +90,10 @@ pub enum Expr {
     },
     Variable {
         name: Token
+    },
+    Assignment {
+        name: Token,
+        value: Box<Expr>
     }
 }
 
@@ -114,12 +118,14 @@ impl Expr {
                 format!("{}{}", operator.get_lexeme(), (*right).to_string())
             }
             Expr::Operator { token } => token.get_lexeme().to_string(),
-
-            Expr::Variable { name } => name.get_lexeme().to_string()
+            Expr::Variable { name } => name.get_lexeme().to_string(),
+            Expr::Assignment { name, value } => {
+                format!("{} = {}", (*name).to_string(), (*value).to_string())
+            }
         }
     }
 
-    pub fn new_binary(left: Expr, operator: Token, right: Expr) -> Self {
+    pub fn create_binary(left: Expr, operator: Token, right: Expr) -> Self {
         Self::Binary {
             left: Box::from(left),
             operator,
@@ -127,29 +133,33 @@ impl Expr {
         }
     }
 
-    pub fn new_grouping(expr: Expr) -> Self {
+    pub fn create_grouping(expr: Expr) -> Self {
         Self::Grouping {
             expr: Box::from(expr),
         }
     }
 
-    pub fn new_literal(literal: LitValue) -> Self {
+    pub fn create_literal(literal: LitValue) -> Self {
         Self::Literal { literal }
     }
 
-    pub fn new_unary(operator: Token, right: Expr) -> Self {
+    pub fn create_unary(operator: Token, right: Expr) -> Self {
         Self::Unary {
             operator,
             right: Box::from(right),
         }
     }
 
-    pub fn new_operator(token: Token) -> Self {
+    pub fn create_operator(token: Token) -> Self {
         Self::Operator { token }
     }
 
-    pub fn new_variable(name: Token) -> Self {
+    pub fn create_variable(name: Token) -> Self {
         Self::Variable { name }
+    }
+
+    pub fn create_assigment(name: Token, value: Expr) -> Self {
+        Self::Assignment { name, value: Box::from(value) }
     }
  
     pub fn evaluate(&self, environment: &mut Environment) -> Result<LitValue, String> {
@@ -161,8 +171,15 @@ impl Expr {
             => Self::evaluate_binary(environment, left, operator.clone(), right),
             Expr::Variable { name } => {
                 environment.get(name.clone())
+            },
+            Expr::Assignment { name, value } => {
+                // TODO: Figure out a more efficient solution! 
+
+                let value: LitValue = value.evaluate(environment)?;
+                environment.assign(name.clone(), value.clone());
+                Ok(value)
             }
-            _ => return Err(format!("Raw operators are not supported")),
+            _ => Err(format!("Raw operators are not supported")),
         }
     }
 
