@@ -35,6 +35,10 @@ impl Environment {
             (None, None) => Err(format!("Undefined variable `{}`", name.get_lexeme()))
         }
     }
+
+    pub fn set_enclosing(&mut self, environment: Environment) {
+        self.enclosing = Some(Box::from(environment));
+    }
 }
 
 mod tests {

@@ -59,9 +59,11 @@ fn run_prompt() -> Result<(), String> {
 fn run_file(path: &str) -> Result<(), String> {
     let mut interpreter = Interpreter::new();
     match fs::read_to_string(path) {
-        Ok(src) => run(&src, &mut interpreter),
+        Ok(src) => run (src.as_str(), &mut interpreter)?,
         Err(msg) => return Err(msg.to_string()),
-    }
+    };
+
+    Ok(())
 }
 
 fn run(src: &str, interpreter: &mut Interpreter) -> Result<(), String> {

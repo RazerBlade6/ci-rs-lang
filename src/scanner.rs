@@ -67,7 +67,7 @@ impl Scanner {
     }
 
     pub fn scan_tokens(&mut self) -> Result<Vec<Token>, String> {
-        while !self.at_end() {
+        while !self.is_at_end() {
             self.start = self.current;
             self.scan_token()?;
         }
@@ -77,7 +77,7 @@ impl Scanner {
         Ok(self.tokens.clone())
     }
 
-    fn at_end(&self) -> bool {
+    fn is_at_end(&self) -> bool {
         self.current >= self.src.len()
     }
 
@@ -124,7 +124,7 @@ impl Scanner {
             }
             '/' => {
                 if self.expect('/') {
-                    while self.peek(0) != '\n' && !self.at_end() {
+                    while self.peek(0) != '\n' && !self.is_at_end() {
                         self.advance();
                     }
                 } else if self.expect('*') {
@@ -136,7 +136,7 @@ impl Scanner {
             '"' => self.string(),
             ' ' => (),
             '\r' => (),
-            '\n' => self.current += 1,
+            '\n' => self.line += 1,
             _ => {
                 if c.is_ascii_digit() {
                     self.number();
@@ -158,7 +158,7 @@ impl Scanner {
     }
 
     fn expect(&mut self, expected: char) -> bool {
-        if self.at_end() {
+        if self.is_at_end() {
             return false;
         }
 
@@ -176,8 +176,9 @@ impl Scanner {
 
     fn add_token(&mut self, token_type: Type, literal: Literal) {
         let text = &self.src[self.start..self.current];
+        let token = Token::new(token_type, text, literal, self.line);
         self.tokens
-            .push(Token::new(token_type, text, literal, self.line));
+            .push(token);
     }
 
     fn add_token_s(&mut self, token_type: Type, literal: Literal, text: &str) {
@@ -214,11 +215,11 @@ impl Scanner {
     }
 
     fn string(&mut self) {
-        while self.peek(0) != '"' && !self.at_end() {
+        while self.peek(0) != '"' && !self.is_at_end() {
             if self.peek(0) == '\n' {
                 self.line += 1
             }
-            if self.at_end() {
+            if self.is_at_end() {
                 self.error("Here", "Unterminated String")
             }
             self.advance();
@@ -250,7 +251,7 @@ impl Scanner {
     }
 
     fn multi_line_comment(&mut self) {
-        while self.peek(0) != '*' && !self.at_end() {
+        while self.peek(0) != '*' && !self.is_at_end() {
             if self.peek(1) == '/' {
                 return;
             }
