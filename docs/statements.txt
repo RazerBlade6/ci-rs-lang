@@ -4,8 +4,8 @@ declaration    → varDecl
                | statement ;
 
                
-
 statement      → exprStmt
+               | ifStmt
                | printStmt
                | block ;
 
@@ -15,6 +15,8 @@ primary        → "true" | "false" | "nil"
                | IDENTIFIER ;
 
 exprStmt       → expression ";" ;
+ifStmt         → "if" "(" expression ")" statement
+               ( "else" statement )? ;
 printStmt      → "print" expression ";" ;
 varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
 block          → "{" declaration* "}" ;

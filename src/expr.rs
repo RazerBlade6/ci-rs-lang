@@ -61,6 +61,28 @@ impl LitValue {
         }
     }
 
+    pub fn is_truthy(&self) -> bool {
+        match self {
+            Self::Number(x) => {
+                if *x == 0.0 {
+                    false
+                } else {
+                    true
+                }
+            }
+            Self::Str(s) => {
+                if s.len() == 0 {
+                    false
+                } else {
+                    true
+                }
+            }
+            Self::True => return true,
+            Self::False => return false,
+            Self::Nil => return false
+        }
+    }    
+
     pub fn is_nil(&self) -> bool {
         match self {
             Nil => true,
@@ -69,6 +91,7 @@ impl LitValue {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,
@@ -80,6 +103,11 @@ pub enum Expr {
     },
     Literal {
         literal: LitValue,
+    },
+    Logical {
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>
     },
     Unary {
         operator: Token,
@@ -105,8 +133,7 @@ impl Expr {
                 operator,
                 right,
             } => {
-                format!("{} {} {}", operator.get_lexeme(), (*left).to_string(), (*right).to_string()
-)
+                format!("{} {} {}", operator.get_lexeme(), (*left).to_string(), (*right).to_string())
             }
             Expr::Grouping { expr } => {
                 format!("({})", (*expr).to_string())
@@ -121,6 +148,9 @@ impl Expr {
             Expr::Variable { name } => name.get_lexeme().to_string(),
             Expr::Assignment { name, value } => {
                 format!("{} = {}", (*name).to_string(), (*value).to_string())
+            },
+            Expr::Logical { left, operator, right } => {
+                format!("`{}` {} `{}`", (*left).to_string(), operator.to_string(), (*right).to_string())
             }
         }
     }
@@ -141,6 +171,10 @@ impl Expr {
 
     pub fn create_literal(literal: LitValue) -> Self {
         Self::Literal { literal }
+    }
+
+    pub fn create_logical(left: Expr, operator: Token, right: Expr) -> Self {
+        Self::Logical { left: Box::from(left), operator, right: Box::from(right)}
     }
 
     pub fn create_unary(operator: Token, right: Expr) -> Self {
@@ -174,11 +208,19 @@ impl Expr {
             },
             Expr::Assignment { name, value } => {
                 // TODO: Figure out a more efficient solution! 
-
                 let value: LitValue = value.evaluate(environment)?;
                 environment.assign(name.clone(), value.clone());
                 Ok(value)
             }
+            Expr::Logical { left, operator, right } => {
+                let left: LitValue = left.evaluate(environment)?;
+                if operator.get_type() == TokenType::Or {
+                    if left.is_truthy() {return Ok(left)}
+                } else {
+                    if !left.is_truthy() {return Ok(left)}
+                }
+                return right.evaluate(environment);
+            },
             _ => Err(format!("Raw operators are not supported")),
         }
     }

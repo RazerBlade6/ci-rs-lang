@@ -25,6 +25,16 @@ impl Interpreter {
             Stmt::Expression { expr } => {
                 expr.evaluate(&mut self.environment)?;
             }
+            Stmt::If { condition, then_branch, else_branch } => {
+                if condition.evaluate(&mut self.environment)?.is_truthy() {
+                    self.execute(*then_branch)?
+                } else if (*else_branch).is_some() {
+                    self.execute((*else_branch).unwrap())?
+                } else {
+                    return Ok(())
+                }
+            }
+
             Stmt::Print { expr } => {
                 let result = expr.evaluate(&mut self.environment)?;
                 println!("{}", result.to_string());
@@ -37,6 +47,12 @@ impl Interpreter {
 
                 self.environment.define(name.get_lexeme().to_string(), value)
             }
+            Stmt::While { condition, body } => {
+                while condition.evaluate(&mut self.environment)?.is_truthy() {
+                    println!("{}", condition.to_string());
+                    self.execute((*body).clone())?;
+                }
+            },
             Stmt::Block { statements } => {
                 let enclosing = Environment::new();
                 self.environment.set_enclosing(enclosing.clone());
@@ -56,7 +72,7 @@ impl Interpreter {
         for statement in statements {
             match self.execute(statement) {
                 Ok(_) => (),
-                Err(_) =>{
+                Err(_) => {
                     self.environment = previous;
                     return Err("Block failed to execute fully".to_string())
                 }

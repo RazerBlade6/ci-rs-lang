@@ -19,7 +19,7 @@
 //!     let tokens: Vec<Token> = scanner.scan_tokens();
 //! }
 //! ```
-use crate::token::{Literal, Token, TokenType as Type};
+use crate::token::{Literal, Token, TokenType};
 use lazy_static::*;
 use std::collections::HashMap;
 
@@ -32,26 +32,25 @@ pub struct Scanner {
 }
 
 lazy_static! {
-    static ref KEYWORD_MAP: HashMap<&'static str, Type> = {
-        let map = HashMap::<&'static str, Type>::from([
-            ("and", Type::And),
-            ("class", Type::Class),
-            ("else", Type::Else),
-            ("false", Type::False),
-            ("for", Type::For),
-            ("fun", Type::Fun),
-            ("if", Type::If),
-            ("nil", Type::Nil),
-            ("or", Type::Or),
-            ("print", Type::Print),
-            ("return", Type::Return),
-            ("super", Type::Super),
-            ("this", Type::This),
-            ("true", Type::True),
-            ("var", Type::Var),
-            ("while", Type::While),
-        ]);
-        map
+    static ref KEYWORD_MAP: HashMap<&'static str, TokenType> = {
+        HashMap::<&'static str, TokenType>::from([
+            ("and", TokenType::And),
+            ("class", TokenType::Class),
+            ("else", TokenType::Else),
+            ("false", TokenType::False),
+            ("for", TokenType::For),
+            ("fun", TokenType::Fun),
+            ("if", TokenType::If),
+            ("nil", TokenType::Nil),
+            ("or", TokenType::Or),
+            ("print", TokenType::Print),
+            ("return", TokenType::Return),
+            ("super", TokenType::Super),
+            ("this", TokenType::This),
+            ("true", TokenType::True),
+            ("var", TokenType::Var),
+            ("while", TokenType::While),
+        ])
     };
 }
 
@@ -72,7 +71,7 @@ impl Scanner {
             self.scan_token()?;
         }
 
-        let eof_token = Token::new(Type::Eof, "", Literal::Null, self.line);
+        let eof_token = Token::new(TokenType::Eof, "", Literal::Null, self.line);
         self.tokens.push(eof_token);
         Ok(self.tokens.clone())
     }
@@ -84,42 +83,42 @@ impl Scanner {
     fn scan_token(&mut self) -> Result<(), String> {
         let c = self.advance();
         match c {
-            '(' => self.add_token_t(Type::LeftParen),
-            ')' => self.add_token_t(Type::RightParen),
-            '{' => self.add_token_t(Type::LeftBrace),
-            '}' => self.add_token_t(Type::RightBrace),
-            ',' => self.add_token_t(Type::Comma),
-            '.' => self.add_token_t(Type::Dot),
-            '-' => self.add_token_t(Type::Minus),
-            '+' => self.add_token_t(Type::Plus),
-            ';' => self.add_token_t(Type::SemiColon),
-            '*' => self.add_token_t(Type::Star),
+            '(' => self.add_token_t(TokenType::LeftParen),
+            ')' => self.add_token_t(TokenType::RightParen),
+            '{' => self.add_token_t(TokenType::LeftBrace),
+            '}' => self.add_token_t(TokenType::RightBrace),
+            ',' => self.add_token_t(TokenType::Comma),
+            '.' => self.add_token_t(TokenType::Dot),
+            '-' => self.add_token_t(TokenType::Minus),
+            '+' => self.add_token_t(TokenType::Plus),
+            ';' => self.add_token_t(TokenType::SemiColon),
+            '*' => self.add_token_t(TokenType::Star),
             '!' => {
                 if self.expect('=') {
-                    self.add_token_t(Type::BangEqual);
+                    self.add_token_t(TokenType::BangEqual);
                 } else {
-                    self.add_token_t(Type::Bang)
+                    self.add_token_t(TokenType::Bang)
                 }
             }
             '=' => {
                 if self.expect('=') {
-                    self.add_token_t(Type::EqualEqual);
+                    self.add_token_t(TokenType::EqualEqual);
                 } else {
-                    self.add_token_t(Type::Equal);
+                    self.add_token_t(TokenType::Equal);
                 }
             }
             '<' => {
                 if self.expect('=') {
-                    self.add_token_t(Type::LessEqual);
+                    self.add_token_t(TokenType::LessEqual);
                 } else {
-                    self.add_token_t(Type::Less);
+                    self.add_token_t(TokenType::Less);
                 }
             }
             '>' => {
                 if self.expect('=') {
-                    self.add_token_t(Type::GreaterEqual);
+                    self.add_token_t(TokenType::GreaterEqual);
                 } else {
-                    self.add_token_t(Type::Greater);
+                    self.add_token_t(TokenType::Greater);
                 }
             }
             '/' => {
@@ -130,7 +129,7 @@ impl Scanner {
                 } else if self.expect('*') {
                     self.multi_line_comment();
                 } else {
-                    self.add_token_t(Type::Slash);
+                    self.add_token_t(TokenType::Slash);
                 }
             }
             '"' => self.string(),
@@ -170,18 +169,18 @@ impl Scanner {
         true
     }
 
-    fn add_token_t(&mut self, token_type: Type) {
+    fn add_token_t(&mut self, token_type: TokenType) {
         self.add_token(token_type, Literal::Null);
     }
 
-    fn add_token(&mut self, token_type: Type, literal: Literal) {
+    fn add_token(&mut self, token_type: TokenType, literal: Literal) {
         let text = &self.src[self.start..self.current];
         let token = Token::new(token_type, text, literal, self.line);
         self.tokens
             .push(token);
     }
 
-    fn add_token_s(&mut self, token_type: Type, literal: Literal, text: &str) {
+    fn add_token_s(&mut self, token_type: TokenType, literal: Literal, text: &str) {
         self.tokens.push(Token::new(token_type, text, literal, self.line))
     }
 
@@ -198,7 +197,7 @@ impl Scanner {
         }
 
         self.add_token(
-            Type::Number,
+            TokenType::Number,
             Literal::Numeric(self.src[self.start..self.current].parse::<f64>().unwrap()),
         )
     }
@@ -228,7 +227,7 @@ impl Scanner {
         self.advance();
 
         let text = self.src[self.start + 1..self.current - 1].to_string();
-        self.add_token_s(Type::String, Literal::Str(text.to_string()), &text);
+        self.add_token_s(TokenType::String, Literal::Str(text.to_string()), &text);
     }
 
     fn identifier(&mut self) {
@@ -240,11 +239,11 @@ impl Scanner {
         let s = &self.src[self.start..self.current];
         let token_type = match KEYWORD_MAP.get(&s) {
             Some(t) => t.clone(),
-            None => Type::Identifier,
+            None => TokenType::Identifier,
         };
 
         let literal = match token_type {
-            Type::Identifier => Literal::Id(s.to_string()),
+            TokenType::Identifier => Literal::Id(s.to_string()),
             _ => Literal::Keyword(s.to_string()),
         };
         self.add_token(token_type, literal)
@@ -279,10 +278,10 @@ mod tests {
 
         assert_eq!(
             vec![
-                Token::new(Type::Number, "123", Literal::Numeric(123.0), 1),
-                Token::new(Type::Plus, "+", Literal::Null, 1),
-                Token::new(Type::Number, "45.67", Literal::Numeric(45.67), 1),
-                Token::new(Type::Eof, "", Literal::Null, 1)
+                Token::new(TokenType::Number, "123", Literal::Numeric(123.0), 1),
+                Token::new(TokenType::Plus, "+", Literal::Null, 1),
+                Token::new(TokenType::Number, "45.67", Literal::Numeric(45.67), 1),
+                Token::new(TokenType::Eof, "", Literal::Null, 1)
             ],
             tokens
         );

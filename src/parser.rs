@@ -58,15 +58,42 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Stmt, String> {
+        if self.match_tokens(&[TokenType::If]) {
+            return self.if_statement();
+        }
         if self.match_tokens(&[TokenType::Print]) {
             return self.print_statement();
         }
-
+        if self.match_tokens(&[TokenType::While]) {
+            return self.while_statement();
+        }
         if self.match_tokens(&[TokenType::LeftBrace]) {
             return Ok(Stmt::Block { statements: Box::from(self.block()?)});
         }
-
         self.expr_statement()
+    }
+
+    fn while_statement(&mut self) -> Result<Stmt, String> {
+        self.consume(TokenType::LeftParen, "Expected '(' after 'while'")?;
+        let condition: Expr = self.expression()?;
+        self.consume(TokenType::RightParen, "Expected ')' after condition")?;
+        let body: Stmt = self.statement()?;
+
+        return Ok(Stmt::While { condition, body: Box::from(body) })
+    }
+
+    fn if_statement(&mut self) -> Result<Stmt, String> {
+        self.consume(TokenType::LeftParen, "Expected '(' after 'if'")?;
+        let condition: Expr = self.expression()?;
+        self.consume(TokenType::RightParen, "Expected ')' after condition")?;
+        let then_branch: Stmt = self.statement()?;
+        let mut else_branch: Option<Stmt> = None;
+        if self.match_tokens(&[TokenType::Else]) {
+            else_branch = Some(self.statement()?);
+        }
+        
+        println!("Here!");
+        Ok(Stmt::If { condition, then_branch: Box::from(then_branch), else_branch: Box::from(else_branch)})
     }
 
     fn print_statement(&mut self) -> Result<Stmt, String> {
@@ -96,7 +123,7 @@ impl Parser {
     }
 
     fn assigment(&mut self) -> Result<Expr, String> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if self.match_tokens(&[TokenType::Equal]) {
             let equals = self.previous();
@@ -110,7 +137,29 @@ impl Parser {
             return Ok(Expr::create_assigment(name, value))
         }
 
-        return Ok(expr)
+        return Ok(expr);
+    }
+
+    fn or(&mut self) -> Result<Expr, String> {
+        let mut expr = self.and()?;
+
+        if self.match_tokens(&[TokenType::Or]) {
+            let operator: Token = self.previous();
+            let right: Expr = self.and()?;
+            expr = Expr::create_logical(expr, operator, right)
+        }
+        return Ok(expr);
+    }
+
+    fn and(&mut self) -> Result<Expr, String> {
+        let mut expr: Expr = self.equality()?;
+
+        if self.match_tokens(&[TokenType::And]) {
+            let operator: Token = self.previous();
+            let right: Expr = self.equality()?;
+            expr = Expr::create_logical(expr, operator, right);
+        }
+        return Ok(expr);
     }
 
     fn equality(&mut self) -> Result<Expr, String> {
@@ -122,7 +171,7 @@ impl Parser {
             expr = Expr::create_binary(expr, operator, right);
         }
 
-        Ok(expr)
+        return Ok(expr);
     }
 
     fn comparison(&mut self) -> Result<Expr, String> {
