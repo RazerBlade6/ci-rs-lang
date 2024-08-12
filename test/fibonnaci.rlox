@@ -1,0 +1,17 @@
+// A program to print the first 20 fibonacci numbers
+
+var a = 0;
+var b = 1;
+var c = a + b;
+var n = 0;
+
+print a;
+print b;
+
+while (n < 20) {
+    n = n + 1;
+    print a + b;
+    a = b;
+    b = c;
+    c = a + b;
+}

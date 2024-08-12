@@ -1,5 +1,7 @@
 #![allow(unused, unused_variables)]
+use std::cell::RefCell;
 use std::fmt::format;
+use std::rc::Rc;
 use crate::{environment, token::*};
 use crate::environment::Environment;
 
@@ -196,7 +198,7 @@ impl Expr {
         Self::Assignment { name, value: Box::from(value) }
     }
  
-    pub fn evaluate(&self, environment: &mut Environment) -> Result<LitValue, String> {
+    pub fn evaluate(&self, environment: Rc<RefCell<Environment>>) -> Result<LitValue, String> {
         match self {
             Expr::Literal { literal } => Ok((*literal).clone()),
             Expr::Grouping { expr } => (*expr).evaluate(environment),
@@ -204,16 +206,18 @@ impl Expr {
             Expr::Binary {left, operator, right} 
             => Self::evaluate_binary(environment, left, operator.clone(), right),
             Expr::Variable { name } => {
-                environment.get(name.clone())
+                match environment.borrow().get(name.clone())? {
+                    Some(v) => Ok(v),
+                    None => return Err(format!("Variable not found")),
+                }
             },
             Expr::Assignment { name, value } => {
-                // TODO: Figure out a more efficient solution! 
-                let value: LitValue = value.evaluate(environment)?;
-                environment.assign(name.clone(), value.clone());
+                let value: LitValue = (*value).evaluate(environment.clone())?;
+                environment.borrow_mut().assign(name.get_lexeme(), value.clone())?;
                 Ok(value)
             }
             Expr::Logical { left, operator, right } => {
-                let left: LitValue = left.evaluate(environment)?;
+                let left: LitValue = left.evaluate(environment.clone())?;
                 if operator.get_type() == TokenType::Or {
                     if left.is_truthy() {return Ok(left)}
                 } else {
@@ -225,7 +229,7 @@ impl Expr {
         }
     }
 
-    fn evaluate_unary(environment: &mut Environment, operator: Token, right: &Box<Expr>) -> Result<LitValue, String> {
+    fn evaluate_unary(environment: Rc<RefCell<Environment>>, operator: Token, right: &Box<Expr>) -> Result<LitValue, String> {
         let right = (*right).evaluate(environment)?;
 
         match (&right, operator.get_type()) {
@@ -238,8 +242,8 @@ impl Expr {
         }
     }
 
-    fn evaluate_binary(environment: &mut Environment, left: &Box<Expr>, operator: Token, right: &Box<Expr>) -> Result<LitValue, String> {
-        let left = (*left).evaluate(environment)?;
+    fn evaluate_binary(environment: Rc<RefCell<Environment>>, left: &Box<Expr>, operator: Token, right: &Box<Expr>) -> Result<LitValue, String> {
+        let left = (*left).evaluate(environment.clone())?;
         let right = (*right).evaluate(environment)?;
 
         match (&left, operator.get_type(), &right) {
@@ -303,7 +307,7 @@ mod tests {
             }),
         };
         let soln = LitValue::Number(-5617.41);
-        let result = expr1.evaluate(&mut Environment::new()).unwrap();
+        let result = expr1.evaluate(Rc::from(RefCell::from(Environment::new()))).unwrap();
         assert_eq!(soln, result);
     }
 
