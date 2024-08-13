@@ -133,7 +133,7 @@ impl Scanner {
                     self.add_token_t(TokenType::Slash);
                 }
             }
-            '"' => self.string(),
+            '"' => self.string()?,
             ' ' => (),
             '\r' => (),
             '\n' => self.line += 1,
@@ -203,10 +203,6 @@ impl Scanner {
         )
     }
 
-    pub fn error(&self, loc: &str, msg: &str) {
-        eprintln!("Error at line {0}, {loc}: {msg}", self.line)
-    }
-
     fn peek(&self, n: usize) -> char {
         match self.src.chars().nth(self.current + n) {
             Some(c) => c,
@@ -214,13 +210,13 @@ impl Scanner {
         }
     }
 
-    fn string(&mut self) {
-        while self.peek(0) != '"' && !self.is_at_end() {
+    fn string(&mut self) -> Result<(), String> {
+        while self.peek(0) != '"' {
             if self.peek(0) == '\n' {
                 self.line += 1
             }
             if self.is_at_end() {
-                self.error("Here", "Unterminated String")
+                return Err(format!("Line {}: Unterminated String", self.line));
             }
             self.advance();
         }
@@ -229,6 +225,7 @@ impl Scanner {
 
         let text = self.src[self.start + 1..self.current - 1].to_string();
         self.add_token_s(TokenType::String, Literal::Str(text.to_string()), &text);
+        Ok(())
     }
 
     fn identifier(&mut self) {

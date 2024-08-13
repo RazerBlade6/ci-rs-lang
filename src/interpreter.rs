@@ -12,7 +12,13 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self {environment: Rc::from(RefCell::from(Environment::new()))}
+        Self {
+            environment: Rc::from(
+                RefCell::from(
+                    Environment::new()
+                )
+            )
+        }
     }
 
     pub fn interpret(&mut self, statements: Vec<&Stmt>) -> Result<(), String> {

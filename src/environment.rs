@@ -19,6 +19,7 @@ impl Environment {
 
     pub fn get(&self, name: String) -> Result<Option<LitValue>, String> {
         let value = self.map.get(&name);
+        
         match (value, &self.enclosing) {
             (Some(literal), _) => Ok(Some(literal.clone())),
             (None, Some(env)) => env.borrow().get(name),
@@ -30,10 +31,12 @@ impl Environment {
         let old_value = self.map.get(name);
         match (old_value, &self.enclosing) {
             (Some(_), _) => {
-                self.map.insert(name.to_string(), value.clone());
+                self.map
+                    .insert(name.to_string(), value.clone());
             },
             (None, Some(env)) => {
-                env.borrow_mut().assign(name, value)?
+                env.borrow_mut()
+                    .assign(name, value)?
             },
             (None, None) => return Err(format!("Undefined variable '{}'", name))
         };
