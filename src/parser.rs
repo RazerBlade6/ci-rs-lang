@@ -86,14 +86,12 @@ impl Parser {
         self.consume(TokenType::LeftParen, "Expected '(' after 'if'")?;
         let condition: Expr = self.expression()?;
         self.consume(TokenType::RightParen, "Expected ')' after condition")?;
-        let then_branch: Stmt = self.statement()?;
-        let mut else_branch: Option<Stmt> = None;
+        let then_branch: Box<Stmt> = Box::new(self.statement()?);
+        let mut else_branch: Option<Box<Stmt>> = None;
         if self.match_tokens(&[TokenType::Else]) {
-            else_branch = Some(self.statement()?);
+            else_branch = Some(Box::new(self.statement()?));
         }
-        
-        println!("Here!");
-        Ok(Stmt::If { condition, then_branch: Box::from(then_branch), else_branch: Box::from(else_branch)})
+        Ok(Stmt::If { condition, then_branch, else_branch})
     }
 
     fn print_statement(&mut self) -> Result<Stmt, String> {
@@ -110,7 +108,7 @@ impl Parser {
 
     fn block(&mut self) -> Result<Stmt, String> {
         let mut statements: Vec<Stmt> = vec![];
-        while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+        while !self.check(&TokenType::RightBrace) && !self.is_at_end() {
             statements.push(self.declaration()?);
         }
 
@@ -129,8 +127,8 @@ impl Parser {
             let equals = self.previous();
             let value = self.assigment()?;
 
-            let name = match &expr {
-                Expr::Variable { name } => name.clone(),
+            let name = match expr {
+                Expr::Variable { name } => name,
                 _ => return Err(format!("Invalid assignment target {}", equals.to_string()))
             };
 
@@ -251,7 +249,7 @@ impl Parser {
 
     fn match_tokens(&mut self, types: &[TokenType]) -> bool {
         for typ in types {
-            if !self.check(typ.clone()) {
+            if !self.check(typ) {
                 continue;
             }
             self.advance();
@@ -265,7 +263,7 @@ impl Parser {
         self.advance();
 
         while !self.is_at_end() {
-            if self.previous().get_type() == TokenType::SemiColon {
+            if *self.previous().get_type() == TokenType::SemiColon {
                 return;
             }
 
@@ -287,7 +285,7 @@ impl Parser {
 
     fn consume(&mut self, typ: TokenType, msg: &'static str) -> Result<Token, String> {
         let token = self.peek();
-        if token.get_type() == typ {
+        if *token.get_type() == typ {
             self.advance();
             Ok(token)
         } else {
@@ -302,7 +300,7 @@ impl Parser {
         self.previous()
     }
 
-    fn check(&mut self, typ: TokenType) -> bool {
+    fn check(&mut self, typ: &TokenType) -> bool {
         if self.is_at_end() {
             return false;
         }
@@ -311,7 +309,7 @@ impl Parser {
     }
 
     fn is_at_end(&mut self) -> bool {
-        self.peek().get_type() == TokenType::Eof
+        self.peek().get_type() == &TokenType::Eof
     }
 
     fn peek(&mut self) -> Token {

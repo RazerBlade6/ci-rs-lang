@@ -68,10 +68,11 @@ fn run_file(path: &str) -> Result<(), String> {
 
 fn run(src: &str, interpreter: &mut Interpreter) -> Result<(), String> {
     let mut scanner: Scanner = Scanner::new(src);
-    let tokens: Vec<Token> = scanner.scan_tokens()?;
+    scanner.scan_tokens()?;
+    let tokens: Vec<Token> = scanner.tokens;
     let mut parser: Parser = Parser::new(tokens);
     let statements: Vec<Stmt> = parser.parse()?;
-    interpreter.interpret(statements)?;
+    interpreter.interpret(statements.iter().collect())?;
     Ok(())
 }
 
@@ -81,14 +82,14 @@ fn main() {
     match args.len() {
         1 => match run_prompt() {
             Ok(_) => exit(0),
-            Err(msg) => eprintln!("Error {msg}"),
+            Err(msg) => println!("Error {msg}"),
         },
         2 => match run_file(&args[1]) {
             Ok(_) => exit(0),
-            Err(msg) => eprintln!("Error {msg}"),
+            Err(msg) => println!("Error {msg}"),
         },
         _ => {
-            eprintln!("[Error] please use as lox ___");
+            println!("[Error] please use as lox ___");
             exit(1)
         }
     }

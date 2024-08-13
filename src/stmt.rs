@@ -4,7 +4,7 @@ use crate::token::Token;
 #[derive(Debug, Clone)]
 pub enum Stmt {
     Expression { expr: Expr },
-    If {condition: Expr, then_branch: Box<Stmt>, else_branch: Box<Option<Stmt>>},
+    If {condition: Expr, then_branch: Box<Stmt>, else_branch: Option<Box<Stmt>>},
     Print { expr: Expr },
     Var {name: Token, initializer: Option<Expr>},
     While {condition: Expr, body: Box<Stmt>},
@@ -29,8 +29,8 @@ impl Stmt {
                 output.join("\n")
             },
             If { condition, then_branch, else_branch } => {
-                let else_branch = match &(**else_branch) {
-                    Some(s) => s.to_string(),
+                let else_branch = match &(*else_branch) {
+                    Some(s) => (*s).to_string(),
                     None => "".to_string()
                 };
                 format!("if {} then {}\n else {}",

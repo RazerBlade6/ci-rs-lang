@@ -147,12 +147,12 @@ impl Token {
         &self.lexeme
     }
 
-    pub fn get_type(&self) -> TokenType {
-        self.token_type.clone()
+    pub fn get_type(&self) -> &TokenType {
+        &self.token_type
     }
 
-    pub fn get_literal(&self) -> Literal{
-        return self.literal.clone()
+    pub fn get_literal(&self) -> &Literal{
+        &self.literal
     }
 
     pub fn get_line(&self) -> usize {

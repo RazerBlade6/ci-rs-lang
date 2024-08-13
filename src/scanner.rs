@@ -25,7 +25,7 @@ use std::collections::HashMap;
 
 pub struct Scanner {
     src: String,
-    tokens: Vec<Token>,
+    pub tokens: Vec<Token>,
     start: usize,
     current: usize,
     line: usize,
@@ -65,7 +65,7 @@ impl Scanner {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, String> {
+    pub fn scan_tokens(&mut self) -> Result<(), String> {
         while !self.is_at_end() {
             self.start = self.current;
             self.scan_token()?;
@@ -73,7 +73,7 @@ impl Scanner {
 
         let eof_token = Token::new(TokenType::Eof, "", Literal::Null, self.line);
         self.tokens.push(eof_token);
-        Ok(self.tokens.clone())
+        Ok(())
     }
 
     fn is_at_end(&self) -> bool {
@@ -238,7 +238,7 @@ impl Scanner {
         }
         let s = &self.src[self.start..self.current];
         let token_type = match KEYWORD_MAP.get(&s) {
-            Some(t) => t.clone(),
+            Some(t) => *t,
             None => TokenType::Identifier,
         };
 
@@ -269,7 +269,7 @@ mod tests {
         let src = "123 + 45.67";
         let mut scanner: Scanner = Scanner::new(src);
         let tokens = match scanner.scan_tokens() {
-            Ok(tokens) => tokens,
+            Ok(_) => scanner.tokens,
             Err(msg) => {
                 println!("ERROR:\n{msg}");
                 exit(1)

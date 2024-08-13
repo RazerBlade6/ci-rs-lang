@@ -5,7 +5,7 @@ use crate::expr::LitValue;
 use crate::stmt::Stmt;
 use crate::environment::Environment;
 
-#[derive(Clone)]
+
 pub struct Interpreter {
     environment: Rc<RefCell<Environment>>
 }
@@ -15,7 +15,7 @@ impl Interpreter {
         Self {environment: Rc::from(RefCell::from(Environment::new()))}
     }
 
-    pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<(), String> {
+    pub fn interpret(&mut self, statements: Vec<&Stmt>) -> Result<(), String> {
         for statement in statements {
             self.execute(statement)?;
         }
@@ -23,18 +23,18 @@ impl Interpreter {
         return Ok(());
     }
 
-    fn execute(&mut self, statement: Stmt) -> Result<(), String> {
+    fn execute(&mut self, statement: &Stmt) -> Result<(), String> {
         match statement {
             Stmt::Expression { expr } => {
                 expr.evaluate(self.environment.clone())?;
             }
             Stmt::If { condition, then_branch, else_branch } => {
-                if condition.evaluate(self.environment.clone())?.is_truthy() {
-                    self.execute(*then_branch)?
-                } else if (*else_branch).is_some() {
-                    self.execute((*else_branch).unwrap())?
-                } else {
-                    return Ok(())
+                let condition = condition.evaluate(self.environment.clone())?;
+
+                match (condition.is_truthy(), else_branch) {
+                    (true, _) => self.execute(&*then_branch)?,
+                    (false, Some(else_branch)) => self.execute(&*else_branch)?,
+                    (false, None) => return Ok(())
                 }
             }
 
@@ -54,13 +54,13 @@ impl Interpreter {
             }
             Stmt::While { condition, body } => {
                 while condition.evaluate(self.environment.clone())?.is_truthy() {
-                    self.execute((*body).clone())?;
+                    self.execute(&(*body))?;
                 }
             },
             Stmt::Block { statements } => {
                 let mut block_environment = Environment::new();
                 block_environment.enclosing = Some(self.environment.clone());
-                match self.execute_block(*statements, self.environment.clone()) {
+                match self.execute_block((**statements).iter().collect(), self.environment.clone()) {
                     Ok(_) => (),
                     Err(msg) => println!("{msg}")
                 };
@@ -70,11 +70,11 @@ impl Interpreter {
         Ok(())
     }
 
-    fn execute_block(&mut self, statements: Vec<Stmt>, environment: Rc<RefCell<Environment>>) -> Result<(), String> {
+    fn execute_block(&mut self, statements: Vec<&Stmt>, environment: Rc<RefCell<Environment>>) -> Result<(), String> {
         let previous = self.environment.clone();
         self.environment = environment;
         for statement in statements {
-            match self.execute(statement) {
+            match self.execute(&statement) {
                 Ok(_) => (),
                 Err(_) => {
                     self.environment = previous;

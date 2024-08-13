@@ -1,0 +1,13 @@
+var a = 10;
+var b = 20;
+
+if (a + b > 30) {
+    print a + b;
+} else {
+    a = a + 1;
+    if (a + b > 30) {
+        print "Hello";
+    } else {
+        print "World";
+    }
+}
