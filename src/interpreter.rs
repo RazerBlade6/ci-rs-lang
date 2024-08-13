@@ -50,7 +50,7 @@ impl Interpreter {
 
                 self.environment
                     .borrow_mut()
-                    .define(name.get_lexeme().to_string(), value)
+                    .define(name.lexeme.to_string(), value)
             }
             Stmt::While { condition, body } => {
                 while condition.evaluate(self.environment.clone())?.is_truthy() {

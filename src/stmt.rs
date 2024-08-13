@@ -19,7 +19,7 @@ impl Stmt {
         match self {
             Expression { expr } => expr.to_string(),
             Print { expr } => format!("(print {})", expr.to_string()),
-            Var { name, .. } => format!("Variable: {} {} ({})", name.get_lexeme(), name.get_type().to_string(), name.get_literal().to_string()),
+            Var { name, .. } => format!("Variable: {} {} ({})", name.lexeme, name.token_type.to_string(), name.literal.to_string()),
             While { condition, body } => format!("while ({}) {}", condition.to_string(), (*body).to_string()),
             Block { statements } => {
                 let mut output: Vec<String> = vec![];

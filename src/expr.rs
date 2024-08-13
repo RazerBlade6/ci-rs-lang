@@ -28,13 +28,13 @@ impl LitValue {
     }
 
     pub fn from_token(token: Token) -> Self {
-        match token.get_type() {
-            TokenType::Number => Self::Number(match token.get_lexeme().parse::<f64>() {
+        match token.token_type {
+            TokenType::Number => Self::Number(match token.lexeme.parse::<f64>() {
                 Ok(f) => f,
                 Err(_) => panic!("Could not parse as Number"),
             }),
-            TokenType::String => Self::Str(token.get_lexeme().to_string()),
-            TokenType::Identifier => Self::Str(token.get_lexeme().to_string()),
+            TokenType::String => Self::Str(token.lexeme.to_string()),
+            TokenType::Identifier => Self::Str(token.lexeme.to_string()),
             TokenType::True => True,
             TokenType::False => False,
             _ => panic!("Could Not get literal from {}", token.to_string()),
@@ -135,7 +135,7 @@ impl Expr {
                 operator,
                 right,
             } => {
-                format!("{} {} {}", operator.get_lexeme(), (*left).to_string(), (*right).to_string())
+                format!("{} {} {}", operator.lexeme, (*left).to_string(), (*right).to_string())
             }
             Expr::Grouping { expr } => {
                 format!("({})", (*expr).to_string())
@@ -144,10 +144,10 @@ impl Expr {
                 format!("{}", literal.to_string())
             }
             Expr::Unary { operator, right } => {
-                format!("{}{}", operator.get_lexeme(), (*right).to_string())
+                format!("{}{}", operator.lexeme, (*right).to_string())
             }
-            Expr::Operator { token } => token.get_lexeme().to_string(),
-            Expr::Variable { name } => name.get_lexeme().to_string(),
+            Expr::Operator { token } => token.lexeme.to_string(),
+            Expr::Variable { name } => name.lexeme.to_string(),
             Expr::Assignment { name, value } => {
                 format!("{} = {}", (*name).to_string(), (*value).to_string())
             },
@@ -206,19 +206,19 @@ impl Expr {
             Expr::Binary {left, operator, right} 
             => Self::evaluate_binary(environment, left, operator, right),
             Expr::Variable { name } => {
-                match environment.borrow().get(name.get_lexeme().to_string())? {
+                match environment.borrow().get(name.lexeme.to_string())? {
                     Some(v) => Ok(v),
                     None => return Err(format!("Variable not found")),
                 }
             },
             Expr::Assignment { name, value } => {
                 let value: LitValue = (*value).evaluate(environment.clone())?;
-                environment.borrow_mut().assign(name.get_lexeme(), &value)?;
+                environment.borrow_mut().assign(&name.lexeme, &value)?;
                 Ok(value)
             }
             Expr::Logical { left, operator, right } => {
                 let left: LitValue = left.evaluate(environment.clone())?;
-                if operator.get_type() == &TokenType::Or {
+                if operator.token_type == TokenType::Or {
                     if left.is_truthy() {return Ok(left)}
                 } else {
                     if !left.is_truthy() {return Ok(left)}
@@ -232,7 +232,7 @@ impl Expr {
     fn evaluate_unary(environment: Rc<RefCell<Environment>>, operator: &Token, right: &Box<Expr>) -> Result<LitValue, String> {
         let right = (*right).evaluate(environment)?;
 
-        match (&right, operator.get_type()) {
+        match (&right, operator.token_type) {
             (Number(x), TokenType::Minus) => return Ok(Number(-x)),
             (_, TokenType::Minus) => {
                 return Err(format!("negation not implemented for {}", right.to_string()))
@@ -246,7 +246,7 @@ impl Expr {
         let left = (*left).evaluate(environment.clone())?;
         let right = (*right).evaluate(environment)?;
 
-        match (&left, operator.get_type(), &right) {
+        match (&left, operator.token_type, &right) {
             (Number(x), TokenType::Minus, Number(y)) => Ok(Number(x - y)),
 
             (Number(x), TokenType::Star, Number(y)) => Ok(Number(x * y)),

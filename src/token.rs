@@ -119,10 +119,10 @@ impl Literal {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Token {
-    token_type: TokenType,
-    lexeme: String,
-    literal: Literal,
-    line: usize,
+    pub token_type: TokenType,
+    pub lexeme: String,
+    pub literal: Literal,
+    pub line: usize,
 }
 
 impl Token {
@@ -141,21 +141,5 @@ impl Token {
         } else {
             return format!("`{}, {}`", self.lexeme, self.literal.to_string());
         }
-    }
-
-    pub fn get_lexeme(&self) -> &str {
-        &self.lexeme
-    }
-
-    pub fn get_type(&self) -> &TokenType {
-        &self.token_type
-    }
-
-    pub fn get_literal(&self) -> &Literal{
-        &self.literal
-    }
-
-    pub fn get_line(&self) -> usize {
-        self.line
     }
 }
