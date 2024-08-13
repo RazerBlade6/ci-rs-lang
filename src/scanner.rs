@@ -35,6 +35,7 @@ lazy_static! {
     static ref KEYWORD_MAP: HashMap<&'static str, TokenType> = {
         HashMap::<&'static str, TokenType>::from([
             ("and", TokenType::And),
+            ("break", TokenType::Break),
             ("class", TokenType::Class),
             ("else", TokenType::Else),
             ("false", TokenType::False),

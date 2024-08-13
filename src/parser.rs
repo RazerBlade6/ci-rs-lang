@@ -18,7 +18,10 @@ impl Parser {
         while !self.is_at_end() {
             match self.declaration() {
                 Ok(statement) => statements.push(statement),
-                Err(error) => errors.push(error),
+                Err(error) => {
+                    errors.push(error);
+                    self.synchronise();
+                },
             }
         }
 
@@ -36,13 +39,7 @@ impl Parser {
             self.statement()
         };
 
-        match result {
-            Ok(statement) => Ok(statement),
-            Err(msg) => {
-                self.synchronise();
-                Err(msg)
-            }
-        }
+        result
     }
 
     fn var_declaration(&mut self) -> Result<Stmt, String> {
@@ -61,7 +58,6 @@ impl Parser {
         if self.match_tokens(&[TokenType::For]) {
             return self.for_statement();
         }
-
         if self.match_tokens(&[TokenType::If]) {
             return self.if_statement();
         }
@@ -280,12 +276,12 @@ impl Parser {
     }
 
     fn primary(&mut self) -> Result<Expr, String> {
-        let tok = self.peek();
-        match tok.token_type {
+        let token = self.peek();
+        match token.token_type {
             TokenType::LeftParen => {
                 self.advance();
                 let expr = self.expression()?;
-                let _ = self.consume(TokenType::RightParen, "Expected `)`");
+                self.consume(TokenType::RightParen, "Expected `)`")?;
                 return Ok(Expr::create_grouping(expr));
             }
             TokenType::False
@@ -294,13 +290,13 @@ impl Parser {
             | TokenType::Number
             | TokenType::String => {
                 self.advance();
-                return Ok(Expr::create_literal(LitValue::from_token(tok)));
+                return Ok(Expr::create_literal(LitValue::from_token(token)));
             }
             TokenType::Identifier => {
                 self.advance();
                 return Ok(Expr::create_variable(self.previous()));
             }
-            _ => return Err(String::from("Expected Expression")),
+            _ => return Err(format!("Line {}: Expected Expression", token.line)),
         }
     }
 
@@ -335,20 +331,21 @@ impl Parser {
                 | TokenType::Return => return,
                 _ => (),
             }
+            self.advance();   
         }
-
-        self.advance();
     }
 
-    fn consume(&mut self, typ: TokenType, msg: &'static str) -> Result<Token, String> {
+    fn consume(&mut self, token_type: TokenType, msg: &str) -> Result<Token, String> {
         let token = self.peek();
-        if token.token_type == typ {
-            let token = self.advance();
+        if token.token_type == token_type {
+            self.advance();
+            let token = self.previous();
             Ok(token)
         } else {
-            Err(format!("Line {}: {}", self.peek().line, msg).to_string())
+            return Err(format!("Line {}: {}", token.line, msg))
         }
     }
+
 
     fn advance(&mut self) -> Token {
         if !self.is_at_end() {

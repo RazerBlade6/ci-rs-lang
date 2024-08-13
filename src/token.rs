@@ -36,7 +36,7 @@ pub enum TokenType {
     Identifier, String, Number,
 
     // Keywords.
-    And, Class, Else, False, Fun, For, If, Nil,
+    And, Break, Class, Else, False, Fun, For, If, Nil,
     Or, Print, Return, Super, This, True, Var, While,
 
     // End of File
@@ -69,6 +69,7 @@ impl TokenType {
             TokenType::String => return "String",
             TokenType::Number => return "Number",
             TokenType::And => return "And",
+            TokenType::Break => return "Break",
             TokenType::Class => return "Class",
             TokenType::Else => return "Else",
             TokenType::False => return "False",
