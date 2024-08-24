@@ -1,14 +1,16 @@
 use crate::expr::Expr;
 use crate::token::Token;
 
+#[allow(unused)]
 #[derive(Debug, Clone)]
 pub enum Stmt {
     Expression { expr: Expr },
     If {condition: Expr, then_branch: Box<Stmt>, else_branch: Option<Box<Stmt>>},
     Print { expr: Expr },
-    Var {name: Token, initializer: Option<Expr>},
+    Var {name: Token, initializer: Expr},
     While {condition: Expr, body: Box<Stmt>},
-    Block {statements: Box<Vec<Stmt>>}
+    Block {statements: Box<Vec<Stmt>>},
+    Function {name: Token, params: Vec<Token>, body: Box<Vec<Stmt>>}
 }
 
 impl Stmt {
@@ -38,6 +40,10 @@ impl Stmt {
                     (*then_branch).to_string(),
                     else_branch
                 )
+            },
+            #[allow(unused)]
+            Function { name, params, body: _ } => {
+                todo!()
             }
         }
     }

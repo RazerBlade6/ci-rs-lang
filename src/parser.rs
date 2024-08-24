@@ -35,6 +35,8 @@ impl Parser {
     fn declaration(&mut self) -> Result<Stmt, String> {
         let result = if self.match_tokens(&[TokenType::Var]) {
             self.var_declaration()
+        } else if self.match_tokens(&[TokenType::Fun]){
+            self.function("function")
         } else {
             self.statement()
         };
@@ -42,11 +44,17 @@ impl Parser {
         result
     }
 
+    fn function(&mut self, kind: &str) -> Result<Stmt, String> {
+        todo!()
+    }
+
     fn var_declaration(&mut self) -> Result<Stmt, String> {
         let name: Token = self.consume(TokenType::Identifier, "Expected variable name")?;
-        let mut initializer: Option<Expr> = None;
+        let initializer: Expr;
         if self.match_tokens(&[TokenType::Equal]) {
-            initializer = Some(self.expression()?);
+            initializer = self.expression()?;
+        } else {
+            initializer = Expr::create_literal(LitValue::Nil);
         }
 
         self.consume(TokenType::SemiColon, "Expected ';' after variable declaration")?;
@@ -272,7 +280,39 @@ impl Parser {
             return Ok(Expr::create_unary(operator, right));
         }
 
-        self.primary()
+        self.call()
+    }
+
+    fn call(&mut self) -> Result<Expr, String> {
+        let mut expr = self.primary()?;
+
+        loop {
+            if self.match_tokens(&[TokenType::LeftParen]) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+        Ok(expr)
+    }
+
+    fn finish_call(&mut self, callee: Expr) -> Result<Expr, String> {
+        let mut arguments: Vec<Expr> = Vec::new();
+        if !self.check(&TokenType::RightParen) {
+            loop {
+                if arguments.len() >= 255 {
+                    return Err(format!("Line {}: Can't have more than 255 arguments", self.peek().line));
+                }
+                arguments.push(self.expression()?);
+                if !self.match_tokens(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        let paren: Token = self.consume(TokenType::RightParen, "Expected ')' after arguments")?;
+
+        return Ok(Expr::create_call(callee, paren, arguments))
     }
 
     fn primary(&mut self) -> Result<Expr, String> {

@@ -1,4 +1,5 @@
 #![allow(unused, unused_variables)]
+use std::alloc::dealloc;
 use std::cell::RefCell;
 use std::fmt::format;
 use std::rc::Rc;
@@ -37,7 +38,7 @@ impl LitValue {
             TokenType::Identifier => Self::Str(token.lexeme.to_string()),
             TokenType::True => True,
             TokenType::False => False,
-            _ => panic!("Could Not get literal from {}", token.to_string()),
+            _ => panic!("Could Not get literal from {}", token.lexeme),
         }
     }
 
@@ -102,6 +103,10 @@ pub enum Expr {
     },
     Grouping {
         expr: Box<Expr>,
+    }, Call {
+        callee: Box<Expr>,
+        paren: Token,
+        arguments: Vec<Expr>
     },
     Literal {
         literal: LitValue,
@@ -154,6 +159,9 @@ impl Expr {
             Expr::Logical { left, operator, right } => {
                 format!("`{}` {} `{}`", (*left).to_string(), operator.to_string(), (*right).to_string())
             }
+            Expr::Call { callee, paren, arguments } => {
+                format!("function {}()", paren.lexeme)
+            },
         }
     }
 
@@ -197,6 +205,15 @@ impl Expr {
     pub fn create_assigment(name: Token, value: Expr) -> Self {
         Self::Assignment { name, value: Box::from(value) }
     }
+
+    pub fn create_call(callee: Expr,
+        paren: Token,
+        arguments: Vec<Expr>) -> Self {
+            Self::Call { callee: Box::from(callee), 
+                paren, 
+                arguments
+            }
+        }
  
     pub fn evaluate(&self, environment: Rc<RefCell<Environment>>) -> Result<LitValue, String> {
         match &self {
@@ -208,13 +225,13 @@ impl Expr {
             Expr::Variable { name } => {
                 match environment.borrow().get(name.lexeme.to_string())? {
                     Some(v) => Ok(v),
-                    None => return Err(format!("Variable not found")),
+                    None => return Err(format!("Variable {} not found", name.lexeme)),
                 }
             },
             Expr::Assignment { name, value } => {
-                let value: LitValue = (*value).evaluate(environment.clone())?;
-                environment.borrow_mut().assign(&name.lexeme, &value)?;
-                Ok(value)
+                let new_value = (*value).evaluate(environment.clone())?;
+                environment.borrow_mut().assign(&name.lexeme, new_value.clone())?;
+                Ok(new_value)
             }
             Expr::Logical { left, operator, right } => {
                 let left: LitValue = left.evaluate(environment.clone())?;
@@ -223,8 +240,21 @@ impl Expr {
                 } else {
                     if !left.is_truthy() {return Ok(left)}
                 }
+
                 return right.evaluate(environment);
             },
+            Expr::Call { callee, paren, arguments } => {
+                let callee: LitValue = callee.evaluate(environment.clone())?;
+
+                let mut argument_literals: Vec<LitValue> = Vec::new();
+                for arg in &**arguments {
+                    argument_literals.push(arg.evaluate(environment.clone())?);
+                }
+                let arguments = argument_literals;
+
+                // function.call(, arguments);
+                todo!()
+            }  
             _ => Err(format!("Raw operators are not supported")),
         }
     }

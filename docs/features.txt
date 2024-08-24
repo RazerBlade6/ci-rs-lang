@@ -6,6 +6,10 @@
     ii.  Strings 
     iii. Booleans
     iv.  Nil (null)
-5. Object-Oriented, supports inheritance, polymorphism, etc.
-6. Statements may be terminated with ; or whitespace (newline)
-7. Variables are declared with var
+5.  Statements may be terminated with ; or whitespace (newline)
+6.  Variables are declared with var
+7.  Supports If-Else blocks
+8.  Support for and while loops
+================== TODO ================================
+9.  Functions are declared with fun function_name(...) and are called with function_name(...)
+10. Supports Object-Oriented Programming, with Classes, Objects, Polymorphism And Inheritance

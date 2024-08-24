@@ -43,16 +43,13 @@ impl Interpreter {
                     (false, None) => return Ok(())
                 }
             }
-
+    
             Stmt::Print { expr } => {
                 let result = expr.evaluate(self.environment.clone())?;
                 println!("{}", result.to_string());
             }
             Stmt::Var { name, initializer } => {
-                let value: LitValue = match initializer {
-                    Some(expr) => expr.evaluate(self.environment.clone())?,
-                    None => LitValue::Nil
-                };
+                let value: LitValue = initializer.evaluate(self.environment.clone())?;
 
                 self.environment
                     .borrow_mut()
@@ -64,33 +61,18 @@ impl Interpreter {
                 }
             },
             Stmt::Block { statements } => {
-                let mut block_environment = Environment::new();
-                block_environment.enclosing = Some(self.environment.clone());
-                match self.execute_block((**statements).iter().collect(), self.environment.clone()) {
-                    Ok(_) => (),
-                    Err(msg) => println!("{msg}")
-                };
+                let mut environment = Environment::new();
+                environment.enclosing = Some(self.environment.clone());
+                let old_environment = self.environment.clone();
+                self.environment = Rc::new(RefCell::new(environment));
+                let result = self.interpret((*statements).iter().map(|b| b).collect());
+                self.environment = old_environment;
+                result?
             }
+            #[allow(unused)]
+            Stmt::Function { name, params, body } => todo!(),
         };
 
         Ok(())
-    }
-
-    fn execute_block(&mut self, statements: Vec<&Stmt>, environment: Rc<RefCell<Environment>>) -> Result<(), String> {
-        let previous = self.environment.clone();
-        self.environment = environment;
-        for statement in statements {
-            match self.execute(&statement) {
-                Ok(_) => (),
-                Err(_) => {
-                    self.environment = previous;
-                    return Err("Block failed to execute fully".to_string())
-                }
-            };
-        }
-        self.environment = previous;
-        Ok(())
-    }
-
-    
+    }    
 }

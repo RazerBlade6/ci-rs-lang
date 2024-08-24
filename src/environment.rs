@@ -1,5 +1,4 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
-
 use crate::expr::LitValue;
 
 #[derive(Debug)]
@@ -27,20 +26,16 @@ impl Environment {
         }
     }
 
-    pub fn assign(&mut self, name: &str, value: &LitValue) -> Result<(), String> {
+    pub fn assign(&mut self, name: &str, value: LitValue) -> Result<(), String> {
+        dbg!(&self.map);
         let old_value = self.map.get(name);
         match (old_value, &self.enclosing) {
             (Some(_), _) => {
-                self.map
-                    .insert(name.to_string(), value.clone());
-            },
-            (None, Some(env)) => {
-                env.borrow_mut()
-                    .assign(name, value)?
-            },
-            (None, None) => return Err(format!("Undefined variable '{}'", name))
-        };
-
-        Ok(())
+                self.map.insert(name.to_string(), value);
+                Ok(())
+            }
+            (None, Some(env)) => (env.borrow_mut()).assign(name, value),
+            (None, None) => Err(format!("Undefined Variable")),
+        }
     }
 }
