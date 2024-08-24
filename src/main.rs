@@ -11,7 +11,7 @@ use parser::*;
 use scanner::Scanner;
 use std::{
     env, fs,
-    io::{self, BufRead, Write},
+    io::{self, Write},
     process::exit,
 };
 use stmt::Stmt;
@@ -25,13 +25,13 @@ fn run_prompt() -> Result<(), String> {
     };
     println!("Welcome to the Lox Interpreter!\nPress {} to exit", esc_key);
 
-    let mut stdin: io::StdinLock<'static> = io::stdin().lock();
-    let mut stdout: io::StdoutLock<'static> = io::stdout().lock();
+    let stdin = io::stdin();
+    let mut stdout = io::stdout();
     let mut interpreter: Interpreter = Interpreter::new();
 
     loop {
         let mut buffer = String::new();
-        print!(r#">>> "#);
+        print!(">>> ");
         stdout.flush().unwrap();
 
         match stdin.read_line(&mut buffer) {
@@ -81,12 +81,12 @@ fn main() {
 
     match args.len() {
         1 => match run_prompt() {
-            Ok(_) => exit(0),
-            Err(msg) => println!("Error {msg}"),
+            Ok(_) => (),
+            Err(msg) => println!("Error:\n {msg}"),
         },
         2 => match run_file(&args[1]) {
-            Ok(_) => exit(0),
-            Err(msg) => println!("Error {msg}"),
+            Ok(_) => (),
+            Err(msg) => println!("Error:\n {msg}"),
         },
         _ => {
             println!("[Error] please use as lox ___");

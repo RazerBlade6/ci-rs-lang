@@ -12,13 +12,7 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self {
-            environment: Rc::from(
-                RefCell::from(
-                    Environment::new()
-                )
-            )
-        }
+        Self { environment: Rc::from( RefCell::from(Environment::new()))}
     }
 
     pub fn interpret(&mut self, statements: Vec<&Stmt>) -> Result<(), String> {
@@ -26,7 +20,7 @@ impl Interpreter {
             self.execute(statement)?;
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn execute(&mut self, statement: &Stmt) -> Result<(), String> {
@@ -38,8 +32,8 @@ impl Interpreter {
                 let condition = condition.evaluate(self.environment.clone())?;
 
                 match (condition.is_truthy(), else_branch) {
-                    (true, _) => self.execute(&*then_branch)?,
-                    (false, Some(else_branch)) => self.execute(&*else_branch)?,
+                    (true, _) => self.execute(&then_branch)?,
+                    (false, Some(else_branch)) => self.execute(&else_branch)?,
                     (false, None) => return Ok(())
                 }
             }

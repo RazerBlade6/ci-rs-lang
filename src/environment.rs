@@ -27,7 +27,6 @@ impl Environment {
     }
 
     pub fn assign(&mut self, name: &str, value: LitValue) -> Result<(), String> {
-        dbg!(&self.map);
         let old_value = self.map.get(name);
         match (old_value, &self.enclosing) {
             (Some(_), _) => {
