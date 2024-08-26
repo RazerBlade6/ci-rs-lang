@@ -27,7 +27,7 @@
 pub enum TokenType {
     // Single-character tokens.
     LeftParen, RightParen, LeftBrace, RightBrace, Comma, 
-    Dot, Minus, Plus, SemiColon, Slash, Star,
+    Dot, Minus, Plus, Percent, SemiColon, Slash, Star,
 
     // One or two character tokens
     Bang, BangEqual, Equal, EqualEqual, Greater, GreaterEqual, Less, LessEqual,
@@ -54,6 +54,7 @@ impl TokenType {
             TokenType::Dot => return "Dot",
             TokenType::Minus => return "Minus",
             TokenType::Plus => return "Plus",
+            TokenType::Percent => return "Percent",
             TokenType::SemiColon => return "Semicolon",
             TokenType::Slash => return "Slash",
             TokenType::Star => return "Star",

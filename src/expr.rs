@@ -1,8 +1,7 @@
 #![allow(unused, unused_variables)]
-use std::alloc::dealloc;
 use std::cell::RefCell;
-use std::fmt::format;
 use std::rc::Rc;
+use crate::callable::Callable;
 use crate::{environment, token::*};
 use crate::environment::Environment;
 
@@ -13,6 +12,7 @@ pub enum LitValue {
     True,
     False,
     Nil,
+    Callable
 }
 
 use LitValue::*;
@@ -25,6 +25,7 @@ impl LitValue {
             True => return String::from("true"),
             False => return String::from("false"),
             Nil => return String::from("nil"),
+            Callable => return String::from("Callable")
         }
     }
 
@@ -61,6 +62,7 @@ impl LitValue {
             Self::True => return False,
             Self::False => return True,
             Self::Nil => return True,
+            Self::Callable => return False
         }
     }
 
@@ -82,7 +84,8 @@ impl LitValue {
             }
             Self::True => return true,
             Self::False => return false,
-            Self::Nil => return false
+            Self::Nil => return false,
+            Self::Callable => return true
         }
     }    
 
@@ -244,16 +247,20 @@ impl Expr {
                 return right.evaluate(environment);
             },
             Expr::Call { callee, paren, arguments } => {
-                let callee: LitValue = callee.evaluate(environment.clone())?;
-
+                let mut callee = &mut callee.evaluate(environment.clone())? as &mut dyn Callable;
+                // let mut callee = (&mut callee) as &mut dyn Callable;
+                
                 let mut argument_literals: Vec<LitValue> = Vec::new();
                 for arg in &**arguments {
                     argument_literals.push(arg.evaluate(environment.clone())?);
                 }
                 let arguments = argument_literals;
 
-                // function.call(, arguments);
-                todo!()
+                if arguments.len() != callee.arity() {
+                    return Err(format!("Expected {} arguments but got {}", callee.arity(), arguments.len()))
+                }
+
+                callee.call(arguments)
             }  
             _ => Err(format!("Raw operators are not supported")),
         }
@@ -284,6 +291,8 @@ impl Expr {
             (Number(x), TokenType::Slash, Number(y)) => Ok(Number(x / y)),
 
             (Number(x), TokenType::Plus, Number(y)) => Ok(Number(x + y)),
+
+            (Number(x), TokenType::Percent, Number(y)) => Ok(Number(x % y)),
 
             (Str(s1), TokenType::Plus, Str(s2)) => Ok(Str(s1.to_owned() + s2)),
 

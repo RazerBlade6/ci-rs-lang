@@ -7,12 +7,12 @@ use crate::environment::Environment;
 
 
 pub struct Interpreter {
-    environment: Rc<RefCell<Environment>>
+    environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self { environment: Rc::from( RefCell::from(Environment::new()))}
+        Self { environment: Rc::new(RefCell::new(Environment::new()))}
     }
 
     pub fn interpret(&mut self, statements: Vec<&Stmt>) -> Result<(), String> {
@@ -51,7 +51,7 @@ impl Interpreter {
             }
             Stmt::While { condition, body } => {
                 while condition.evaluate(self.environment.clone())?.is_truthy() {
-                    self.execute(&(*body))?;
+                    self.execute(&body)?;
                 }
             },
             Stmt::Block { statements } => {
@@ -59,7 +59,11 @@ impl Interpreter {
                 environment.enclosing = Some(self.environment.clone());
                 let old_environment = self.environment.clone();
                 self.environment = Rc::new(RefCell::new(environment));
-                let result = self.interpret((*statements).iter().map(|b| b).collect());
+                let result = self.interpret((*statements)
+                    .iter()
+                    .map(|b| b)
+                    .collect()
+                );
                 self.environment = old_environment;
                 result?
             }

@@ -9,7 +9,7 @@ pub enum Stmt {
     Print { expr: Expr },
     Var {name: Token, initializer: Expr},
     While {condition: Expr, body: Box<Stmt>},
-    Block {statements: Box<Vec<Stmt>>},
+    Block {statements: Vec<Stmt>},
     Function {name: Token, params: Vec<Token>, body: Box<Vec<Stmt>>}
 }
 

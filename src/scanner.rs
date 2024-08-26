@@ -92,6 +92,7 @@ impl Scanner {
             '.' => self.add_token_t(TokenType::Dot),
             '-' => self.add_token_t(TokenType::Minus),
             '+' => self.add_token_t(TokenType::Plus),
+            '%' => self.add_token_t(TokenType::Percent),
             ';' => self.add_token_t(TokenType::SemiColon),
             '*' => self.add_token_t(TokenType::Star),
             '!' => {
@@ -177,8 +178,7 @@ impl Scanner {
     fn add_token(&mut self, token_type: TokenType, literal: Literal) {
         let text = &self.src[self.start..self.current];
         let token = Token::new(token_type, text, literal, self.line);
-        self.tokens
-            .push(token);
+        self.tokens.push(token);
     }
 
     fn add_token_s(&mut self, token_type: TokenType, literal: Literal, text: &str) {

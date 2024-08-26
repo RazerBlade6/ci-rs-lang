@@ -9,7 +9,7 @@ pub struct Environment {
 
 impl Environment {
     pub fn new() -> Self {
-        Self {map: HashMap::new(), enclosing: None}
+        Self { map: HashMap::new(), enclosing: None }
     }
 
     pub fn define(&mut self, name: String, value: LitValue) {
@@ -34,7 +34,7 @@ impl Environment {
                 Ok(())
             }
             (None, Some(env)) => (env.borrow_mut()).assign(name, value),
-            (None, None) => Err(format!("Undefined Variable")),
+            (None, None) => Err(format!("Undefined Variable {}", name)),
         }
     }
 }

@@ -45,6 +45,7 @@ impl Parser {
     }
 
     fn function(&mut self, kind: &str) -> Result<Stmt, String> {
+        let _ = kind;
         todo!()
     }
 
@@ -116,7 +117,7 @@ impl Parser {
         if let Some(change) = change {
             let statements = vec![body, 
             Stmt::Expression { expr: change }];
-            body = Stmt::Block { statements: Box::from(statements) };
+            body = Stmt::Block { statements };
         }
 
         let condition = match condition {
@@ -128,7 +129,7 @@ impl Parser {
 
         if let Some(initializer) = initializer {
             let statements = vec![initializer, body];
-            body = Stmt::Block { statements: Box::from(statements) };
+            body = Stmt::Block { statements };
         }
 
         Ok(body)
@@ -152,7 +153,7 @@ impl Parser {
         self.consume(TokenType::RightParen, "Expected ')' after condition")?;
         let body: Stmt = self.statement()?;
 
-        return Ok(Stmt::While { condition, body: Box::from(body) })
+        Ok(Stmt::While { condition, body: Box::from(body) })
     }
 
     fn print_statement(&mut self) -> Result<Stmt, String> {
@@ -168,7 +169,7 @@ impl Parser {
         }
 
         self.consume(TokenType::RightBrace, "Expect '}' after block")?;
-        Ok(Stmt::Block{statements: Box::from(statements)})
+        Ok(Stmt::Block{statements: statements})
     }
 
     fn expr_statement(&mut self) -> Result<Stmt, String> {
@@ -196,7 +197,7 @@ impl Parser {
             return Ok(Expr::create_assigment(name, value))
         }
 
-        return Ok(expr);
+        Ok(expr)
     }
 
     fn or(&mut self) -> Result<Expr, String> {
@@ -264,7 +265,7 @@ impl Parser {
     fn factor(&mut self) -> Result<Expr, String> {
         let mut expr = self.unary()?;
 
-        while self.match_tokens(&[TokenType::Slash, TokenType::Star]) {
+        while self.match_tokens(&[TokenType::Slash, TokenType::Star, TokenType::Percent]) {
             let operator = self.previous();
             let right = self.factor()?;
             expr = Expr::create_binary(expr, operator, right);
@@ -288,6 +289,7 @@ impl Parser {
 
         loop {
             if self.match_tokens(&[TokenType::LeftParen]) {
+                println!("Here!");
                 expr = self.finish_call(expr)?;
             } else {
                 break;

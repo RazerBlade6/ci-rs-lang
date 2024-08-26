@@ -5,16 +5,16 @@ var c = "global c";
     var a = "outer a";
     var b = "outer b";
     {
-        a = 10;
         var a = "inner a";
-        print a;
-        print b;
-        print c;
+        print a; // inner a
+        print b; // outer b
+        print c; // global c
+        print d; // ERROR!!
     }
-    print a;
-    print b;
-    print c;
+    print a; // outer a
+    print b; // outer b
+    print c; // global c
 }
-print a;
+print a; // global a
 print b;
 print c;

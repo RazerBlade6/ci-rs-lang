@@ -12,13 +12,13 @@ grouping       → "(" expression ")" ;
 unary          → ( "-" | "!" ) expression ;
 binary         → expression operator expression ;
 operator       → "==" | "!=" | "<" | "<=" | ">" | ">="
-               | "+"  | "-"  | "*" | "/" ;
+               | "+"  | "-"  | "*" | "/" | "%";
 call           → primary ( "(" arguments? ")" )* ; 
 
 Precedence Rules: Highest to Lowest
     | 1. () |               → Call
     | 2. !  | -             → Unary
-    | 3. /  | *             → Factor
+    | 3. /  | *  | %        → Factor
     | 4. +  | -             → Term
     | 5. >  | >= | <= | <   → Comparison
     | 6. == | !=            → Equality
