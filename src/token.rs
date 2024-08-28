@@ -26,18 +26,52 @@
 #[derive(Clone, PartialEq, Debug, Copy)]
 pub enum TokenType {
     // Single-character tokens.
-    LeftParen, RightParen, LeftBrace, RightBrace, Comma, 
-    Dot, Minus, Plus, Percent, SemiColon, Slash, Star,
+    LeftParen,
+    RightParen,
+    LeftBrace,
+    RightBrace,
+    Comma,
+    Dot,
+    Minus,
+    Plus,
+    Percent,
+    SemiColon,
+    Slash,
+    Star,
 
     // One or two character tokens
-    Bang, BangEqual, Equal, EqualEqual, Greater, GreaterEqual, Less, LessEqual,
+    Bang,
+    BangEqual,
+    Equal,
+    EqualEqual,
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
 
     // Literals
-    Identifier, String, Number,
+    Identifier,
+    String,
+    Number,
 
     // Keywords.
-    And, Break, Class, Else, False, Fun, For, If, Nil,
-    Or, Print, Return, Super, This, True, Var, While,
+    And,
+    Break,
+    Class,
+    Else,
+    False,
+    Fun,
+    For,
+    If,
+    Nil,
+    Or,
+    Print,
+    Return,
+    Super,
+    This,
+    True,
+    Var,
+    While,
 
     // End of File
     Eof,
@@ -139,9 +173,9 @@ impl Token {
 
     pub fn to_string(&self) -> String {
         if self.literal.is_null() {
-            return format!("`{} ({})`", self.lexeme, self.token_type.to_string());
+            return format!("`{}` ({})", self.lexeme, self.token_type.to_string());
         } else {
-            return format!("`{}, {}`", self.lexeme, self.literal.to_string());
+            return format!("`{}`, {}", self.lexeme, self.literal.to_string());
         }
     }
 }

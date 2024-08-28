@@ -1,28 +1,31 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use crate::expr::LitValue;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 #[derive(Debug)]
 pub struct Environment {
     pub enclosing: Option<Rc<RefCell<Environment>>>,
-    map: HashMap<String, LitValue>
+    map: HashMap<String, LitValue>,
 }
 
 impl Environment {
     pub fn new() -> Self {
-        Self { map: HashMap::new(), enclosing: None }
+        Self {
+            map: HashMap::new(),
+            enclosing: None,
+        }
     }
 
     pub fn define(&mut self, name: String, value: LitValue) {
         self.map.insert(name, value);
     }
 
-    pub fn get(&self, name: String) -> Result<Option<LitValue>, String> {
+    pub fn get(&self, name: String) -> Result<LitValue, String> {
         let value = self.map.get(&name);
-        
+
         match (value, &self.enclosing) {
-            (Some(literal), _) => Ok(Some(literal.clone())),
+            (Some(literal), _) => Ok(literal.clone()),
             (None, Some(env)) => env.borrow().get(name),
-            (None, None) => Err(format!("Undefined Variable '{}'", name))
+            (None, None) => Err(format!("Undefined Variable '{}'", name)),
         }
     }
 

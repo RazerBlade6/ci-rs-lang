@@ -1,6 +1,7 @@
 var a = 10;
 var b = 20;
 var c = false;
+
 if (a + b > 30) {
     print a + b;
 } else {

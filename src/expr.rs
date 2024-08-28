@@ -1,18 +1,62 @@
 #![allow(unused, unused_variables)]
+use crate::environment::Environment;
+use crate::{environment, token::*};
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::callable::Callable;
-use crate::{environment, token::*};
-use crate::environment::Environment;
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Clone)]
 pub enum LitValue {
     Number(f64),
     Str(String),
     True,
     False,
     Nil,
-    Callable
+    // Full credit to CodeScope for this whole thing, there's no way in hell I would've gotten this without him.
+    // I mean seriously wtf is an Rc<dyn Fn> ?
+    Callable {
+        name: Token,
+        arity: usize,
+        fun: Rc<dyn Fn(Vec<LitValue>) -> LitValue>,
+    },
+}
+
+impl PartialEq for LitValue {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Number(l0), Self::Number(r0)) => l0 == r0,
+            (Self::Str(l0), Self::Str(r0)) => l0 == r0,
+            (
+                Self::Callable {
+                    name: _,
+                    arity: _,
+                    fun: _,
+                },
+                Self::Callable {
+                    name: _,
+                    arity: _,
+                    fun: _,
+                },
+            ) => panic!("Cannot Equate functions"),
+            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+        }
+    }
+}
+
+impl std::fmt::Debug for LitValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Number(arg0) => f.debug_tuple("Number").field(arg0).finish(),
+            Self::Str(arg0) => f.debug_tuple("Str").field(arg0).finish(),
+            Self::True => write!(f, "True"),
+            Self::False => write!(f, "False"),
+            Self::Nil => write!(f, "Nil"),
+            Self::Callable { name, arity, fun } => f
+                .debug_struct("Callable")
+                .field("name", name)
+                .field("arity", arity)
+                .finish(),
+        }
+    }
 }
 
 use LitValue::*;
@@ -25,7 +69,21 @@ impl LitValue {
             True => return String::from("true"),
             False => return String::from("false"),
             Nil => return String::from("nil"),
-            Callable => return String::from("Callable")
+            Self::Callable {
+                name,
+                arity,
+                fun: _,
+            } => return format!("{}({} args), ", name.lexeme, arity),
+        }
+    }
+
+    fn to_type(&self) -> &str {
+        match self {
+            Number(_) => return "Number",
+            Str(_) => return "String",
+            True | False => return "Boolean",
+            Nil => return "nil",
+            Callable { name, arity, fun } => return "<function>",
         }
     }
 
@@ -62,7 +120,11 @@ impl LitValue {
             Self::True => return False,
             Self::False => return True,
             Self::Nil => return True,
-            Self::Callable => return False
+            Callable {
+                name,
+                arity,
+                fun: _,
+            } => panic!("Callable cannot be checked as falsy"),
         }
     }
 
@@ -85,9 +147,13 @@ impl LitValue {
             Self::True => return true,
             Self::False => return false,
             Self::Nil => return false,
-            Self::Callable => return true
+            Callable {
+                name,
+                arity,
+                fun: _,
+            } => panic!("Callable cannot be checked as truthy"),
         }
-    }    
+    }
 
     pub fn is_nil(&self) -> bool {
         match self {
@@ -106,10 +172,11 @@ pub enum Expr {
     },
     Grouping {
         expr: Box<Expr>,
-    }, Call {
+    },
+    Call {
         callee: Box<Expr>,
         paren: Token,
-        arguments: Vec<Expr>
+        args: Vec<Expr>,
     },
     Literal {
         literal: LitValue,
@@ -117,7 +184,7 @@ pub enum Expr {
     Logical {
         left: Box<Expr>,
         operator: Token,
-        right: Box<Expr>
+        right: Box<Expr>,
     },
     Unary {
         operator: Token,
@@ -127,12 +194,12 @@ pub enum Expr {
         token: Token,
     },
     Variable {
-        name: Token
+        name: Token,
     },
     Assignment {
         name: Token,
-        value: Box<Expr>
-    }
+        value: Box<Expr>,
+    },
 }
 
 impl Expr {
@@ -143,7 +210,12 @@ impl Expr {
                 operator,
                 right,
             } => {
-                format!("{} {} {}", operator.lexeme, (*left).to_string(), (*right).to_string())
+                format!(
+                    "{} {} {}",
+                    operator.lexeme,
+                    (*left).to_string(),
+                    (*right).to_string()
+                )
             }
             Expr::Grouping { expr } => {
                 format!("({})", (*expr).to_string())
@@ -158,13 +230,26 @@ impl Expr {
             Expr::Variable { name } => name.lexeme.to_string(),
             Expr::Assignment { name, value } => {
                 format!("{} = {}", (*name).to_string(), (*value).to_string())
-            },
-            Expr::Logical { left, operator, right } => {
-                format!("`{}` {} `{}`", (*left).to_string(), operator.to_string(), (*right).to_string())
             }
-            Expr::Call { callee, paren, arguments } => {
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => {
+                format!(
+                    "`{}` {} `{}`",
+                    (*left).to_string(),
+                    operator.to_string(),
+                    (*right).to_string()
+                )
+            }
+            Expr::Call {
+                callee,
+                paren,
+                args,
+            } => {
                 format!("function {}()", paren.lexeme)
-            },
+            }
         }
     }
 
@@ -187,7 +272,11 @@ impl Expr {
     }
 
     pub fn create_logical(left: Expr, operator: Token, right: Expr) -> Self {
-        Self::Logical { left: Box::from(left), operator, right: Box::from(right)}
+        Self::Logical {
+            left: Box::from(left),
+            operator,
+            right: Box::from(right),
+        }
     }
 
     pub fn create_unary(operator: Token, right: Expr) -> Self {
@@ -206,80 +295,118 @@ impl Expr {
     }
 
     pub fn create_assigment(name: Token, value: Expr) -> Self {
-        Self::Assignment { name, value: Box::from(value) }
+        Self::Assignment {
+            name,
+            value: Box::from(value),
+        }
     }
 
-    pub fn create_call(callee: Expr,
-        paren: Token,
-        arguments: Vec<Expr>) -> Self {
-            Self::Call { callee: Box::from(callee), 
-                paren, 
-                arguments
-            }
+    pub fn create_call(callee: Expr, paren: Token, args: Vec<Expr>) -> Self {
+        Self::Call {
+            callee: Box::from(callee),
+            paren,
+            args,
         }
- 
+    }
+
     pub fn evaluate(&self, environment: Rc<RefCell<Environment>>) -> Result<LitValue, String> {
         match &self {
             Expr::Literal { literal } => Ok((*literal).clone()),
             Expr::Grouping { expr } => (*expr).evaluate(environment),
             Expr::Unary { operator, right } => Self::evaluate_unary(environment, operator, right),
-            Expr::Binary {left, operator, right} 
-            => Self::evaluate_binary(environment, left, operator, right),
-            Expr::Variable { name } => {
-                match environment.borrow().get(name.lexeme.to_string())? {
-                    Some(v) => Ok(v),
-                    None => return Err(format!("Variable {} not found", name.lexeme)),
-                }
-            },
+            Expr::Binary {
+                left,
+                operator,
+                right,
+            } => Self::evaluate_binary(environment, left, operator, right),
+            Expr::Variable { name } => environment.borrow().get(name.lexeme.to_string()),
             Expr::Assignment { name, value } => {
                 let new_value = (*value).evaluate(environment.clone())?;
-                environment.borrow_mut().assign(&name.lexeme, new_value.clone())?;
+                environment
+                    .borrow_mut()
+                    .assign(&name.lexeme, new_value.clone())?;
                 Ok(new_value)
             }
-            Expr::Logical { left, operator, right } => {
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => {
                 let left: LitValue = left.evaluate(environment.clone())?;
                 if operator.token_type == TokenType::Or {
-                    if left.is_truthy() {return Ok(left)}
+                    if left.is_truthy() {
+                        return Ok(left);
+                    }
                 } else {
-                    if !left.is_truthy() {return Ok(left)}
+                    if !left.is_truthy() {
+                        return Ok(left);
+                    }
                 }
 
                 return right.evaluate(environment);
-            },
-            Expr::Call { callee, paren, arguments } => {
-                let mut callee = &mut callee.evaluate(environment.clone())? as &mut dyn Callable;
-                // let mut callee = (&mut callee) as &mut dyn Callable;
-                
-                let mut argument_literals: Vec<LitValue> = Vec::new();
-                for arg in &**arguments {
-                    argument_literals.push(arg.evaluate(environment.clone())?);
+            }
+            Expr::Call {
+                callee,
+                paren,
+                args,
+            } => {
+                let callee = (*callee).evaluate(environment.clone())?;
+                let retval: LitValue;
+                let mut arguments = vec![];
+                for arg in args {
+                    arguments.push(arg.evaluate(environment.clone())?);
                 }
-                let arguments = argument_literals;
-
-                if arguments.len() != callee.arity() {
-                    return Err(format!("Expected {} arguments but got {}", callee.arity(), arguments.len()))
+                match callee {
+                    Callable {
+                        name,
+                        arity,
+                        fun,
+                    } => {
+                        if args.len() != arity {
+                            return Err(format!(
+                                "fun `{}` expected {} arguments but got {}",
+                                name.lexeme,
+                                arity,
+                                args.len()
+                            ));
+                        }
+                        retval = fun(arguments)
+                    }
+                    other => return Err(format!("{} cannot be called", other.to_string())),
                 }
 
-                callee.call(arguments)
-            }  
+                Ok(retval)
+            }
             _ => Err(format!("Raw operators are not supported")),
         }
     }
 
-    fn evaluate_unary(environment: Rc<RefCell<Environment>>, operator: &Token, right: &Box<Expr>) -> Result<LitValue, String> {
+    fn evaluate_unary(
+        environment: Rc<RefCell<Environment>>,
+        operator: &Token,
+        right: &Box<Expr>,
+    ) -> Result<LitValue, String> {
         let right = (*right).evaluate(environment)?;
 
         match (&right, operator.token_type) {
             (Number(x), TokenType::Minus) => return Ok(Number(-x)),
             (_, TokenType::Minus) => {
-                return Err(format!("negation not implemented for {}", right.to_string()))
+                return Err(format!(
+                    "negation not implemented for {}",
+                    right.to_string()
+                ))
             }
             (any, TokenType::Bang) => Ok(any.is_falsy()),
             _ => todo!(),
         }
     }
 
-    fn evaluate_binary(environment: Rc<RefCell<Environment>>, left: &Box<Expr>, operator: &Token, right: &Box<Expr>) -> Result<LitValue, String> {
+    fn evaluate_binary(
+        environment: Rc<RefCell<Environment>>,
+        left: &Box<Expr>,
+        operator: &Token,
+        right: &Box<Expr>,
+    ) -> Result<LitValue, String> {
         let left = (*left).evaluate(environment.clone())?;
         let right = (*right).evaluate(environment)?;
 
@@ -296,20 +423,60 @@ impl Expr {
 
             (Str(s1), TokenType::Plus, Str(s2)) => Ok(Str(s1.to_owned() + s2)),
 
-            (Number(x), TokenType::Greater, Number(y)) => { if x > y { Ok(True) } else { Ok(False)}}
-
-            (Number(x), TokenType::GreaterEqual, Number(y)) => { if x >= y { Ok(True) } else { Ok(False) }}
-
-            (Number(x), TokenType::Less, Number(y)) => { if x < y { Ok(True) } else { Ok(False) }}
-
-            (Number(x), TokenType::LessEqual, Number(y)) => {if x <= y {  Ok(True) } else { Ok(False) }}
-
-            (x, TokenType::EqualEqual, y) => { if x == y { Ok(True) } else { Ok(False) }}
-
-            (x, TokenType::BangEqual, y) => { if x != y { Ok(True) } else { Ok(False) }}
-
-            _ => {Err(format!("{} not implemented between {} and {}", operator.to_string(), left.to_string(), right.to_string()))
+            (Number(x), TokenType::Greater, Number(y)) => {
+                if x > y {
+                    Ok(True)
+                } else {
+                    Ok(False)
+                }
             }
+
+            (Number(x), TokenType::GreaterEqual, Number(y)) => {
+                if x >= y {
+                    Ok(True)
+                } else {
+                    Ok(False)
+                }
+            }
+
+            (Number(x), TokenType::Less, Number(y)) => {
+                if x < y {
+                    Ok(True)
+                } else {
+                    Ok(False)
+                }
+            }
+
+            (Number(x), TokenType::LessEqual, Number(y)) => {
+                if x <= y {
+                    Ok(True)
+                } else {
+                    Ok(False)
+                }
+            }
+
+            (x, TokenType::EqualEqual, y) => {
+                if x == y {
+                    Ok(True)
+                } else {
+                    Ok(False)
+                }
+            }
+
+            (x, TokenType::BangEqual, y) => {
+                if x != y {
+                    Ok(True)
+                } else {
+                    Ok(False)
+                }
+            }
+
+            _ => Err(format!(
+                "{} not implemented between {} and {}",
+                operator.to_string(),
+                left.to_type(),
+                right.to_type()
+            )),
         }
     }
 }
@@ -324,7 +491,20 @@ mod tests {
     #[test]
     fn test_to_string() {
         let soln1 = String::from("-123 * (45.67)");
-        let expr1 = Expr::Binary { left: Box::new(Expr::Unary { operator: Token::new(TokenType::Minus, "-", Literal::Null, 1), right: (Box::new(Expr::Literal {literal: Number(123.0),})),}), operator: Token::new(TokenType::Star, "*", Literal::Null, 1), right: Box::new(Expr::Grouping { expr: Box::new(Expr::Literal { literal: Number(45.67), }),}),};        
+        let expr1 = Expr::Binary {
+            left: Box::new(Expr::Unary {
+                operator: Token::new(TokenType::Minus, "-", Literal::Null, 1),
+                right: (Box::new(Expr::Literal {
+                    literal: Number(123.0),
+                })),
+            }),
+            operator: Token::new(TokenType::Star, "*", Literal::Null, 1),
+            right: Box::new(Expr::Grouping {
+                expr: Box::new(Expr::Literal {
+                    literal: Number(45.67),
+                }),
+            }),
+        };
         let res1 = expr1.to_string();
         assert_eq!(res1, soln1);
     }
@@ -346,7 +526,9 @@ mod tests {
             }),
         };
         let soln = LitValue::Number(-5617.41);
-        let result = expr1.evaluate(Rc::from(RefCell::from(Environment::new()))).unwrap();
+        let result = expr1
+            .evaluate(Rc::from(RefCell::from(Environment::new())))
+            .unwrap();
         assert_eq!(soln, result);
     }
 

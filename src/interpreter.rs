@@ -1,10 +1,11 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::expr::LitValue;
-use crate::stmt::Stmt;
 use crate::environment::Environment;
-
+use crate::expr::LitValue;
+use crate::native::*;
+use crate::stmt::Stmt;
+use crate::token::*;
 
 pub struct Interpreter {
     environment: Rc<RefCell<Environment>>,
@@ -12,7 +13,27 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self { environment: Rc::new(RefCell::new(Environment::new()))}
+        let mut globals = Environment::new();
+        let name = Token::new(TokenType::Fun, "clock", Literal::Null, 0);
+        globals.define(
+            "clock".to_string(),
+            LitValue::Callable {
+                name,
+                arity: 0,
+                fun: Rc::from(clock),
+            },
+        );
+        globals.define(
+            "clear".to_string(), 
+            LitValue::Callable { 
+                name: Token::new(TokenType::Fun, "clear", Literal::Null, 0), 
+                arity: 0, 
+                fun: Rc::from(clear) 
+            }
+        );
+        Self {
+            environment: Rc::new(RefCell::new(globals)),
+        }
     }
 
     pub fn interpret(&mut self, statements: Vec<&Stmt>) -> Result<(), String> {
@@ -28,16 +49,20 @@ impl Interpreter {
             Stmt::Expression { expr } => {
                 expr.evaluate(self.environment.clone())?;
             }
-            Stmt::If { condition, then_branch, else_branch } => {
+            Stmt::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
                 let condition = condition.evaluate(self.environment.clone())?;
 
                 match (condition.is_truthy(), else_branch) {
                     (true, _) => self.execute(&then_branch)?,
                     (false, Some(else_branch)) => self.execute(&else_branch)?,
-                    (false, None) => return Ok(())
+                    (false, None) => return Ok(()),
                 }
             }
-    
+
             Stmt::Print { expr } => {
                 let result = expr.evaluate(self.environment.clone())?;
                 println!("{}", result.to_string());
@@ -53,17 +78,13 @@ impl Interpreter {
                 while condition.evaluate(self.environment.clone())?.is_truthy() {
                     self.execute(&body)?;
                 }
-            },
+            }
             Stmt::Block { statements } => {
                 let mut environment = Environment::new();
                 environment.enclosing = Some(self.environment.clone());
                 let old_environment = self.environment.clone();
                 self.environment = Rc::new(RefCell::new(environment));
-                let result = self.interpret((*statements)
-                    .iter()
-                    .map(|b| b)
-                    .collect()
-                );
+                let result = self.interpret((*statements).iter().map(|b| b).collect());
                 self.environment = old_environment;
                 result?
             }
@@ -72,5 +93,5 @@ impl Interpreter {
         };
 
         Ok(())
-    }    
+    }
 }

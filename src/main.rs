@@ -1,22 +1,22 @@
-mod expr; 
+mod environment;
+mod expr;
 mod interpreter;
 mod parser;
 mod scanner;
+mod native;
 mod stmt;
 mod token;
-mod environment;
-mod callable;
-mod commands;
 
 use interpreter::Interpreter;
 use parser::*;
 use scanner::Scanner;
 use std::{
-   env, fs, io::{self, Write}, process::exit
+    env, fs,
+    io::{self, Write},
+    process::exit,
 };
 use stmt::Stmt;
 use token::*;
-use commands::execute;
 // use expr::{Expr, LitValue};
 
 fn run_prompt() -> Result<(), String> {
@@ -48,19 +48,19 @@ fn run_prompt() -> Result<(), String> {
         if &buffer == "\n" || &buffer == "\r\n" {
             println!("");
             continue;
-        } else if &buffer[0..7] == "command" {
-            let buffer = &buffer[8..];
-            let split = buffer.find(" ").unwrap_or(buffer.len());
-            let command = &buffer[..split];
-            let args = buffer.split(' ').collect::<Vec<&str>>()[1..].to_vec();
-            println!("Command: {command}");
-            for arg in &args {
-                println!("{arg}");
-            }
-            execute(command, args)?;
+        } //else if &buffer[0..7] == "command" {
+        //     let buffer = &buffer[8..];
+        //     let split = buffer.find(" ").unwrap_or(buffer.len());
+        //     let command = &buffer[..split];
+        //     let args = buffer.split(' ').collect::<Vec<&str>>()[1..].to_vec();
+        //     println!("Command: {command}");
+        //     for arg in &args {
+        //         println!("{arg}");
+        //     }
+        //     execute(command, args)?;
 
-            continue;
-        }
+        //     continue;
+        // }
 
         match run(buffer.trim(), &mut interpreter) {
             Ok(_) => (),
@@ -72,7 +72,7 @@ fn run_prompt() -> Result<(), String> {
 fn run_file(path: &str) -> Result<(), String> {
     let mut interpreter = Interpreter::new();
     match fs::read_to_string(path) {
-        Ok(src) => run (src.as_str(), &mut interpreter)?,
+        Ok(src) => run(src.as_str(), &mut interpreter)?,
         Err(msg) => return Err(msg.to_string()),
     };
 

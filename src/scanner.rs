@@ -182,7 +182,8 @@ impl Scanner {
     }
 
     fn add_token_s(&mut self, token_type: TokenType, literal: Literal, text: &str) {
-        self.tokens.push(Token::new(token_type, text, literal, self.line))
+        self.tokens
+            .push(Token::new(token_type, text, literal, self.line))
     }
 
     fn number(&mut self) {

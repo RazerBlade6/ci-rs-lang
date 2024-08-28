@@ -6,15 +6,15 @@ var c = "global c";
     var b = "outer b";
     {
         var a = "inner a";
-        print a; // inner a
-        print b; // outer b
-        print c; // global c
-        print d; // ERROR!!
+        print a;  
+        print b;  
+        print c;  
+        print d;
     }
-    print a; // outer a
-    print b; // outer b
-    print c; // global c
+    print a; 
+    print b; 
+    print c; 
 }
-print a; // global a
+print a;
 print b;
 print c;

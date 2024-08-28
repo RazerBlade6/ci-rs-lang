@@ -21,7 +21,7 @@ impl Parser {
                 Err(error) => {
                     errors.push(error);
                     self.synchronise();
-                },
+                }
             }
         }
 
@@ -35,7 +35,7 @@ impl Parser {
     fn declaration(&mut self) -> Result<Stmt, String> {
         let result = if self.match_tokens(&[TokenType::Var]) {
             self.var_declaration()
-        } else if self.match_tokens(&[TokenType::Fun]){
+        } else if self.match_tokens(&[TokenType::Fun]) {
             self.function("function")
         } else {
             self.statement()
@@ -58,9 +58,12 @@ impl Parser {
             initializer = Expr::create_literal(LitValue::Nil);
         }
 
-        self.consume(TokenType::SemiColon, "Expected ';' after variable declaration")?;
-    
-        Ok(Stmt::Var { name , initializer })
+        self.consume(
+            TokenType::SemiColon,
+            "Expected ';' after variable declaration",
+        )?;
+
+        Ok(Stmt::Var { name, initializer })
     }
 
     fn statement(&mut self) -> Result<Stmt, String> {
@@ -101,7 +104,7 @@ impl Parser {
         }
 
         self.consume(TokenType::SemiColon, "Expected ';' after condition")?;
-        
+
         let change: Option<Expr>;
         if !self.check(&TokenType::RightParen) {
             change = Some(self.expression()?);
@@ -110,22 +113,25 @@ impl Parser {
         }
 
         self.consume(TokenType::RightParen, "Expected ')' after clauses")?;
-        
 
         let mut body = self.statement()?;
 
         if let Some(change) = change {
-            let statements = vec![body, 
-            Stmt::Expression { expr: change }];
+            let statements = vec![body, Stmt::Expression { expr: change }];
             body = Stmt::Block { statements };
         }
 
         let condition = match condition {
-            None => Expr::Literal { literal: LitValue::True },
-            Some(c) => c
+            None => Expr::Literal {
+                literal: LitValue::True,
+            },
+            Some(c) => c,
         };
 
-        body = Stmt::While { condition, body: Box::from(body) };
+        body = Stmt::While {
+            condition,
+            body: Box::from(body),
+        };
 
         if let Some(initializer) = initializer {
             let statements = vec![initializer, body];
@@ -144,7 +150,11 @@ impl Parser {
         if self.match_tokens(&[TokenType::Else]) {
             else_branch = Some(Box::new(self.statement()?));
         }
-        Ok(Stmt::If { condition, then_branch, else_branch})
+        Ok(Stmt::If {
+            condition,
+            then_branch,
+            else_branch,
+        })
     }
 
     fn while_statement(&mut self) -> Result<Stmt, String> {
@@ -153,7 +163,10 @@ impl Parser {
         self.consume(TokenType::RightParen, "Expected ')' after condition")?;
         let body: Stmt = self.statement()?;
 
-        Ok(Stmt::While { condition, body: Box::from(body) })
+        Ok(Stmt::While {
+            condition,
+            body: Box::from(body),
+        })
     }
 
     fn print_statement(&mut self) -> Result<Stmt, String> {
@@ -168,8 +181,10 @@ impl Parser {
             statements.push(self.declaration()?);
         }
 
-        self.consume(TokenType::RightBrace, "Expect '}' after block")?;
-        Ok(Stmt::Block{statements: statements})
+        self.consume(TokenType::RightBrace, "Expected '}' after block")?;
+        Ok(Stmt::Block {
+            statements: statements,
+        })
     }
 
     fn expr_statement(&mut self) -> Result<Stmt, String> {
@@ -191,10 +206,10 @@ impl Parser {
 
             let name = match expr {
                 Expr::Variable { name } => name,
-                _ => return Err(format!("Invalid assignment target {}", equals.to_string()))
+                _ => return Err(format!("Invalid assignment target {}", equals.to_string())),
             };
 
-            return Ok(Expr::create_assigment(name, value))
+            return Ok(Expr::create_assigment(name, value));
         }
 
         Ok(expr)
@@ -289,7 +304,6 @@ impl Parser {
 
         loop {
             if self.match_tokens(&[TokenType::LeftParen]) {
-                println!("Here!");
                 expr = self.finish_call(expr)?;
             } else {
                 break;
@@ -303,7 +317,10 @@ impl Parser {
         if !self.check(&TokenType::RightParen) {
             loop {
                 if arguments.len() >= 255 {
-                    return Err(format!("Line {}: Can't have more than 255 arguments", self.peek().line));
+                    return Err(format!(
+                        "Line {}: Can't have more than 255 arguments",
+                        self.peek().line
+                    ));
                 }
                 arguments.push(self.expression()?);
                 if !self.match_tokens(&[TokenType::Comma]) {
@@ -311,10 +328,8 @@ impl Parser {
                 }
             }
         }
-
         let paren: Token = self.consume(TokenType::RightParen, "Expected ')' after arguments")?;
-
-        return Ok(Expr::create_call(callee, paren, arguments))
+        return Ok(Expr::create_call(callee, paren, arguments));
     }
 
     fn primary(&mut self) -> Result<Expr, String> {
@@ -373,7 +388,7 @@ impl Parser {
                 | TokenType::Return => return,
                 _ => (),
             }
-            self.advance();   
+            self.advance();
         }
     }
 
@@ -384,10 +399,9 @@ impl Parser {
             let token = self.previous();
             Ok(token)
         } else {
-            return Err(format!("Line {}: {}", token.line, msg))
+            return Err(format!("Line {}: {}", token.line, msg));
         }
     }
-
 
     fn advance(&mut self) -> Token {
         if !self.is_at_end() {
