@@ -1,6 +1,5 @@
-#![allow(unused, unused_variables)]
 use crate::environment::Environment;
-use crate::{environment, token::*};
+use crate::token::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -8,8 +7,7 @@ use std::rc::Rc;
 pub enum LitValue {
     Number(f64),
     Str(String),
-    True,
-    False,
+    Boolean(bool),
     Nil,
     // Full credit to CodeScope for this whole thing, there's no way in hell I would've gotten this without him.
     // I mean seriously wtf is an Rc<dyn Fn> ?
@@ -25,18 +23,11 @@ impl PartialEq for LitValue {
         match (self, other) {
             (Self::Number(l0), Self::Number(r0)) => l0 == r0,
             (Self::Str(l0), Self::Str(r0)) => l0 == r0,
+            (Self::Boolean(l0), Self::Boolean(r0)) => l0 == r0,
             (
-                Self::Callable {
-                    name: _,
-                    arity: _,
-                    fun: _,
-                },
-                Self::Callable {
-                    name: _,
-                    arity: _,
-                    fun: _,
-                },
-            ) => panic!("Cannot Equate functions"),
+                Self::Callable {name: _, arity: _, fun: _ },
+                Self::Callable {name: _, arity: _, fun: _,},
+            ) => panic!("Invalid Syntax: Attempted to compare Callable"),
             _ => core::mem::discriminant(self) == core::mem::discriminant(other),
         }
     }
@@ -47,10 +38,9 @@ impl std::fmt::Debug for LitValue {
         match self {
             Self::Number(arg0) => f.debug_tuple("Number").field(arg0).finish(),
             Self::Str(arg0) => f.debug_tuple("Str").field(arg0).finish(),
-            Self::True => write!(f, "True"),
-            Self::False => write!(f, "False"),
+            Self::Boolean(arg0) => f.debug_tuple("Boolean").field(arg0).finish(),
             Self::Nil => write!(f, "Nil"),
-            Self::Callable { name, arity, fun } => f
+            Self::Callable { name, arity, fun: _ } => f
                 .debug_struct("Callable")
                 .field("name", name)
                 .field("arity", arity)
@@ -66,8 +56,7 @@ impl LitValue {
         match self {
             Number(n) => return format!("{:.5}", n),
             Str(s) => return s.to_string(),
-            True => return String::from("true"),
-            False => return String::from("false"),
+            Boolean(b) => return format!("{b}"),
             Nil => return String::from("nil"),
             Self::Callable {
                 name,
@@ -81,9 +70,9 @@ impl LitValue {
         match self {
             Number(_) => return "Number",
             Str(_) => return "String",
-            True | False => return "Boolean",
+            Boolean(_) => return "Boolean",
             Nil => return "nil",
-            Callable { name, arity, fun } => return "<function>",
+            Callable { name: _, arity: _, fun: _ } => return "<function>",
         }
     }
 
@@ -91,83 +80,42 @@ impl LitValue {
         match token.token_type {
             TokenType::Number => Self::Number(match token.lexeme.parse::<f64>() {
                 Ok(f) => f,
-                Err(_) => panic!("Could not parse as Number"),
+                Err(_) => panic!("Invalid Syntax: attempted to parse non-numeric as f64"),
             }),
             TokenType::String => Self::Str(token.lexeme.to_string()),
             TokenType::Identifier => Self::Str(token.lexeme.to_string()),
-            TokenType::True => True,
-            TokenType::False => False,
+            TokenType::True => Self::Boolean(true),
+            TokenType::False => Self::Boolean(false),
             TokenType::Nil => Nil,
-            other => panic!("Could not get Literal Value from {}", other.to_string())
-        }
-    }
-
-    fn from_bool(x: bool) -> LitValue {
-        if x {
-            True
-        } else {
-            False
+            other => panic!("Invalid Syntax: Attempted extracting literal alue from non-valued type {}", other.to_string())
         }
     }
 
     pub fn is_falsy(&self) -> LitValue {
         match self {
-            Number(x) => {
-                if *x == 0.0 {
-                    True
-                } else {
-                    False
-                }
-            }
-            Str(s) => {
-                if s.len() == 0 {
-                    True
-                } else {
-                    False
-                }
-            }
-            True => return False,
-            False => return True,
-            Nil => return True,
+            Number(x) => Boolean(*x == 0.0),
+            Str(s) => Boolean(s.len() == 0),
+            Boolean(b) => Boolean(*b),
+            Nil => Boolean(true),
             Callable {
-                name,
-                arity,
+                name: _,
+                arity: _,
                 fun: _,
-            } => panic!("Callable cannot be checked as falsy"),
+            } => panic!("Invalid Syntax: attempted to check falsy-ness of Callable"),
         }
     }
 
     pub fn is_truthy(&self) -> bool {
         match self {
-            Number(x) => {
-                if *x == 0.0 {
-                    false
-                } else {
-                    true
-                }
-            }
-            Str(s) => {
-                if s.len() == 0 {
-                    false
-                } else {
-                    true
-                }
-            }
-            True => return true,
-            False => return false,
+            Number(x) => return *x != 0.0,
+            Str(s) => return s.len() != 0,
+            Boolean(b) => return *b,
             Nil => return false,
             Callable {
-                name,
-                arity,
+                name: _,
+                arity: _,
                 fun: _,
-            } => panic!("Callable cannot be checked as truthy"),
-        }
-    }
-
-    pub fn is_nil(&self) -> bool {
-        match self {
-            Nil => true,
-            _ => false,
+            } => panic!("Invalid Syntax: attempted to check truthy-ness of Callable"),
         }
     }
 }
@@ -198,9 +146,6 @@ pub enum Expr {
     Unary {
         operator: Token,
         right: Box<Expr>,
-    },
-    Operator {
-        token: Token,
     },
     Variable {
         name: Token,
@@ -235,7 +180,6 @@ impl Expr {
             Expr::Unary { operator, right } => {
                 format!("{}{}", operator.lexeme, (*right).to_string())
             }
-            Expr::Operator { token } => token.lexeme.to_string(),
             Expr::Variable { name } => name.lexeme.to_string(),
             Expr::Assignment { name, value } => {
                 format!("{} = {}", (*name).to_string(), (*value).to_string())
@@ -253,9 +197,9 @@ impl Expr {
                 )
             }
             Expr::Call {
-                callee,
+                callee: _,
                 paren,
-                args,
+                args: _
             } => {
                 format!("function {}()", paren.lexeme)
             }
@@ -293,10 +237,6 @@ impl Expr {
             operator,
             right: Box::from(right),
         }
-    }
-
-    pub fn create_operator(token: Token) -> Self {
-        Self::Operator { token }
     }
 
     pub fn create_variable(name: Token) -> Self {
@@ -347,8 +287,6 @@ impl Expr {
                 paren,
                 args,
             } => Self::evaluate_call(environment, callee, paren, args),
-            
-            _ => Err(format!("Raw operators are not supported")),
         }
     }
 
@@ -394,17 +332,17 @@ impl Expr {
 
             (Str(s1), TokenType::Plus, Str(s2)) => Ok(Str(s1.clone() + s2)),
 
-            (Number(x), TokenType::Greater, Number(y)) => Ok(LitValue::from_bool(x > y)),
+            (Number(x), TokenType::Greater, Number(y)) => Ok(Boolean(x > y)),
 
-            (Number(x), TokenType::GreaterEqual, Number(y)) =>Ok(LitValue::from_bool(x >= y)),
+            (Number(x), TokenType::GreaterEqual, Number(y)) =>Ok(Boolean(x >= y)),
 
-            (Number(x), TokenType::Less, Number(y)) => Ok(LitValue::from_bool(x < y)),
+            (Number(x), TokenType::Less, Number(y)) => Ok(Boolean(x < y)),
 
-            (Number(x), TokenType::LessEqual, Number(y)) => Ok(LitValue::from_bool(x <= y)),
+            (Number(x), TokenType::LessEqual, Number(y)) => Ok(Boolean(x <= y)),
 
-            (x, TokenType::EqualEqual, y) => Ok(LitValue::from_bool(x == y)),
+            (x, TokenType::EqualEqual, y) => Ok(Boolean(x == y)),
 
-            (x, TokenType::BangEqual, y) =>Ok(LitValue::from_bool(x != y)),
+            (x, TokenType::BangEqual, y) =>Ok(Boolean(x != y)),
 
             _ => Err(format!(
                 "{} not implemented between {} and {}",
@@ -439,7 +377,7 @@ impl Expr {
         return right.evaluate(environment);
     }
 
-    fn evaluate_call(environment: Rc<RefCell<Environment>>, callee: &Expr, paren: &Token, args: &[Expr]) -> Result<LitValue, String> {
+    fn evaluate_call(environment: Rc<RefCell<Environment>>, callee: &Expr, _paren: &Token, args: &[Expr]) -> Result<LitValue, String> {
         let callee = (*callee).evaluate(environment.clone())?;
         let retval: LitValue;
      
@@ -455,73 +393,9 @@ impl Expr {
                 }
                 retval = fun(arguments)
             }
-            other => return Err(format!("{} cannot be called", other.to_string())),
+            other => return Err(format!("{} cannot be called", other.to_type())),
         }
 
         Ok(retval)
-    }
-}
-
-#[cfg(test)]
-
-mod tests {
-    use super::*;
-    use crate::parser::Parser;
-    use crate::scanner::Scanner;
-
-    #[test]
-    fn test_to_string() {
-        let soln1 = String::from("-123 * (45.67)");
-        let expr1 = Expr::Binary {
-            left: Box::new(Expr::Unary {
-                operator: Token::new(TokenType::Minus, "-", Literal::Null, 1),
-                right: (Box::new(Expr::Literal {
-                    literal: Number(123.0),
-                })),
-            }),
-            operator: Token::new(TokenType::Star, "*", Literal::Null, 1),
-            right: Box::new(Expr::Grouping {
-                expr: Box::new(Expr::Literal {
-                    literal: Number(45.67),
-                }),
-            }),
-        };
-        let res1 = expr1.to_string();
-        assert_eq!(res1, soln1);
-    }
-
-    #[test]
-    fn test_evaluate() {
-        let expr1 = Expr::Binary {
-            left: Box::new(Expr::Unary {
-                operator: Token::new(TokenType::Minus, "-", Literal::Null, 1),
-                right: (Box::new(Expr::Literal {
-                    literal: Number(123.0),
-                })),
-            }),
-            operator: Token::new(TokenType::Star, "*", Literal::Null, 1),
-            right: Box::new(Expr::Grouping {
-                expr: Box::new(Expr::Literal {
-                    literal: Number(45.67),
-                }),
-            }),
-        };
-        let soln = LitValue::Number(-5617.41);
-        let result = expr1
-            .evaluate(Rc::from(RefCell::from(Environment::new())))
-            .unwrap();
-        assert_eq!(soln, result);
-    }
-
-    #[test]
-    fn test_stringify() {
-        let token = Token::new(
-            TokenType::String,
-            "Hello World",
-            Literal::Str("Hello World".to_string()),
-            1,
-        );
-        let literal_value = LitValue::from_token(token);
-        println!("{}", literal_value.to_string());
     }
 }

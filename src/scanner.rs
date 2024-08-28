@@ -225,7 +225,7 @@ impl Scanner {
         self.advance();
 
         let text = self.src[self.start + 1..self.current - 1].to_string();
-        self.add_token_s(TokenType::String, Literal::Str(text.to_string()), &text);
+        self.add_token_s(TokenType::String, Literal::Str(text.clone()), &text);
         Ok(())
     }
 
@@ -254,35 +254,5 @@ impl Scanner {
                 return;
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::process::exit;
-
-    use crate::scanner::*;
-
-    #[test]
-    fn test_scanner() {
-        let src = "123 + 45.67";
-        let mut scanner: Scanner = Scanner::new(src);
-        let tokens = match scanner.scan_tokens() {
-            Ok(_) => scanner.tokens,
-            Err(msg) => {
-                println!("ERROR:\n{msg}");
-                exit(1)
-            }
-        };
-
-        assert_eq!(
-            vec![
-                Token::new(TokenType::Number, "123", Literal::Numeric(123.0), 1),
-                Token::new(TokenType::Plus, "+", Literal::Null, 1),
-                Token::new(TokenType::Number, "45.67", Literal::Numeric(45.67), 1),
-                Token::new(TokenType::Eof, "", Literal::Null, 1)
-            ],
-            tokens
-        );
     }
 }

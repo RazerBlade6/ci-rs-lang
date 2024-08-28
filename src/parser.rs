@@ -123,7 +123,7 @@ impl Parser {
 
         let condition = match condition {
             None => Expr::Literal {
-                literal: LitValue::True,
+                literal: LitValue::Boolean(true),
             },
             Some(c) => c,
         };
