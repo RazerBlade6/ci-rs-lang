@@ -49,7 +49,7 @@ fn run_prompt() -> Result<(), String> {
             println!("");
             continue;
         } 
-        
+
         match run(buffer.trim(), &mut interpreter) {
             Ok(_) => (),
             Err(msg) => println!("\nERROR:\n{msg}\n"),

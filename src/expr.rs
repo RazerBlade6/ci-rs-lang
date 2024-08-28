@@ -97,29 +97,38 @@ impl LitValue {
             TokenType::Identifier => Self::Str(token.lexeme.to_string()),
             TokenType::True => True,
             TokenType::False => False,
-            _ => panic!("Could Not get literal from {}", token.lexeme),
+            TokenType::Nil => Nil,
+            other => panic!("Could not get Literal Value from {}", other.to_string())
+        }
+    }
+
+    fn from_bool(x: bool) -> LitValue {
+        if x {
+            True
+        } else {
+            False
         }
     }
 
     pub fn is_falsy(&self) -> LitValue {
         match self {
-            Self::Number(x) => {
+            Number(x) => {
                 if *x == 0.0 {
                     True
                 } else {
                     False
                 }
             }
-            Self::Str(s) => {
+            Str(s) => {
                 if s.len() == 0 {
                     True
                 } else {
                     False
                 }
             }
-            Self::True => return False,
-            Self::False => return True,
-            Self::Nil => return True,
+            True => return False,
+            False => return True,
+            Nil => return True,
             Callable {
                 name,
                 arity,
@@ -130,23 +139,23 @@ impl LitValue {
 
     pub fn is_truthy(&self) -> bool {
         match self {
-            Self::Number(x) => {
+            Number(x) => {
                 if *x == 0.0 {
                     false
                 } else {
                     true
                 }
             }
-            Self::Str(s) => {
+            Str(s) => {
                 if s.len() == 0 {
                     false
                 } else {
                     true
                 }
             }
-            Self::True => return true,
-            Self::False => return false,
-            Self::Nil => return false,
+            True => return true,
+            False => return false,
+            Nil => return false,
             Callable {
                 name,
                 arity,
@@ -312,67 +321,33 @@ impl Expr {
     pub fn evaluate(&self, environment: Rc<RefCell<Environment>>) -> Result<LitValue, String> {
         match &self {
             Expr::Literal { literal } => Ok((*literal).clone()),
+
             Expr::Grouping { expr } => (*expr).evaluate(environment),
+
             Expr::Unary { operator, right } => Self::evaluate_unary(environment, operator, right),
+
             Expr::Binary {
                 left,
                 operator,
                 right,
             } => Self::evaluate_binary(environment, left, operator, right),
+
             Expr::Variable { name } => environment.borrow().get(name.lexeme.to_string()),
-            Expr::Assignment { name, value } => {
-                let new_value = (*value).evaluate(environment.clone())?;
-                environment
-                    .borrow_mut()
-                    .assign(&name.lexeme, new_value.clone())?;
-                Ok(new_value)
-            }
+
+            Expr::Assignment { name, value } => Self::evaluate_assignment(environment, name, value),
+
             Expr::Logical {
                 left,
                 operator,
                 right,
-            } => {
-                let left: LitValue = left.evaluate(environment.clone())?;
-                if operator.token_type == TokenType::Or {
-                    if left.is_truthy() {
-                        return Ok(left);
-                    }
-                } else {
-                    if !left.is_truthy() {
-                        return Ok(left);
-                    }
-                }
+            } => Self::evaluate_logical(environment, left, operator, right),
 
-                return right.evaluate(environment);
-            }
             Expr::Call {
                 callee,
                 paren,
                 args,
-            } => {
-                let callee = (*callee).evaluate(environment.clone())?;
-                let retval: LitValue;
-                let mut arguments = vec![];
-                for arg in args {
-                    arguments.push(arg.evaluate(environment.clone())?);
-                }
-                match callee {
-                    Callable { name, arity, fun } => {
-                        if args.len() != arity {
-                            return Err(format!(
-                                "fun `{}` expected {} arguments but got {}",
-                                name.lexeme,
-                                arity,
-                                args.len()
-                            ));
-                        }
-                        retval = fun(arguments)
-                    }
-                    other => return Err(format!("{} cannot be called", other.to_string())),
-                }
-
-                Ok(retval)
-            }
+            } => Self::evaluate_call(environment, callee, paren, args),
+            
             _ => Err(format!("Raw operators are not supported")),
         }
     }
@@ -389,11 +364,11 @@ impl Expr {
             (_, TokenType::Minus) => {
                 return Err(format!(
                     "negation not implemented for {}",
-                    right.to_string()
+                    right.to_type()
                 ))
             }
             (any, TokenType::Bang) => Ok(any.is_falsy()),
-            _ => todo!(),
+            _ => panic!("Invalid syntax: should never reach here!"),
         }
     }
 
@@ -417,55 +392,19 @@ impl Expr {
 
             (Number(x), TokenType::Percent, Number(y)) => Ok(Number(x % y)),
 
-            (Str(s1), TokenType::Plus, Str(s2)) => Ok(Str(s1.to_owned() + s2)),
+            (Str(s1), TokenType::Plus, Str(s2)) => Ok(Str(s1.clone() + s2)),
 
-            (Number(x), TokenType::Greater, Number(y)) => {
-                if x > y {
-                    Ok(True)
-                } else {
-                    Ok(False)
-                }
-            }
+            (Number(x), TokenType::Greater, Number(y)) => Ok(LitValue::from_bool(x > y)),
 
-            (Number(x), TokenType::GreaterEqual, Number(y)) => {
-                if x >= y {
-                    Ok(True)
-                } else {
-                    Ok(False)
-                }
-            }
+            (Number(x), TokenType::GreaterEqual, Number(y)) =>Ok(LitValue::from_bool(x >= y)),
 
-            (Number(x), TokenType::Less, Number(y)) => {
-                if x < y {
-                    Ok(True)
-                } else {
-                    Ok(False)
-                }
-            }
+            (Number(x), TokenType::Less, Number(y)) => Ok(LitValue::from_bool(x < y)),
 
-            (Number(x), TokenType::LessEqual, Number(y)) => {
-                if x <= y {
-                    Ok(True)
-                } else {
-                    Ok(False)
-                }
-            }
+            (Number(x), TokenType::LessEqual, Number(y)) => Ok(LitValue::from_bool(x <= y)),
 
-            (x, TokenType::EqualEqual, y) => {
-                if x == y {
-                    Ok(True)
-                } else {
-                    Ok(False)
-                }
-            }
+            (x, TokenType::EqualEqual, y) => Ok(LitValue::from_bool(x == y)),
 
-            (x, TokenType::BangEqual, y) => {
-                if x != y {
-                    Ok(True)
-                } else {
-                    Ok(False)
-                }
-            }
+            (x, TokenType::BangEqual, y) =>Ok(LitValue::from_bool(x != y)),
 
             _ => Err(format!(
                 "{} not implemented between {} and {}",
@@ -474,6 +413,52 @@ impl Expr {
                 right.to_type()
             )),
         }
+    }
+
+    fn evaluate_assignment(environment: Rc<RefCell<Environment>>, name: &Token, value: &Expr) -> Result<LitValue, String> {
+        let new_value = (*value).evaluate(environment.clone())?;
+        environment
+            .borrow_mut()
+            .assign(&name.lexeme, new_value.clone())?;
+
+        Ok(new_value)
+    }
+    
+    fn evaluate_logical(environment: Rc<RefCell<Environment>>, left: &Expr, operator: &Token, right: &Expr) -> Result<LitValue, String> {
+        let left: LitValue = left.evaluate(environment.clone())?;
+        if operator.token_type == TokenType::Or {
+            if left.is_truthy() {
+                return Ok(left);
+            }
+        } else {
+            if !left.is_truthy() {
+                return Ok(left);
+            }
+        }
+
+        return right.evaluate(environment);
+    }
+
+    fn evaluate_call(environment: Rc<RefCell<Environment>>, callee: &Expr, paren: &Token, args: &[Expr]) -> Result<LitValue, String> {
+        let callee = (*callee).evaluate(environment.clone())?;
+        let retval: LitValue;
+     
+        let mut arguments = vec![];
+        for arg in args {
+            arguments.push(arg.evaluate(environment.clone())?);
+        }
+
+        match callee {
+            Callable { name, arity, fun } => {
+                if args.len() != arity {
+                    return Err(format!("fun `{}` expected {} arguments but got {}", name.lexeme, arity, args.len()));
+                }
+                retval = fun(arguments)
+            }
+            other => return Err(format!("{} cannot be called", other.to_string())),
+        }
+
+        Ok(retval)
     }
 }
 
