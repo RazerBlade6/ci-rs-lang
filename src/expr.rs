@@ -182,7 +182,7 @@ impl Expr {
             }
             Expr::Variable { name } => name.lexeme.to_string(),
             Expr::Assignment { name, value } => {
-                format!("{} = {}", (*name).to_string(), (*value).to_string())
+                format!("{} = {}", name.lexeme, (*value).to_string())
             }
             Expr::Logical {
                 left,
@@ -192,7 +192,7 @@ impl Expr {
                 format!(
                     "`{}` {} `{}`",
                     (*left).to_string(),
-                    operator.to_string(),
+                    operator.lexeme,
                     (*right).to_string()
                 )
             }
@@ -342,11 +342,11 @@ impl Expr {
 
             (x, TokenType::EqualEqual, y) => Ok(Boolean(x == y)),
 
-            (x, TokenType::BangEqual, y) =>Ok(Boolean(x != y)),
+            (x, TokenType::BangEqual, y) => Ok(Boolean(x != y)),
 
             _ => Err(format!(
                 "{} not implemented between {} and {}",
-                operator.to_string(),
+                operator.lexeme,
                 left.to_type(),
                 right.to_type()
             )),

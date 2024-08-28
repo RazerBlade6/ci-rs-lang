@@ -42,10 +42,9 @@ impl Stmt {
             Expression { expr } => expr.to_string(),
             Print { expr } => format!("(print {})", expr.to_string()),
             Var { name, .. } => format!(
-                "Variable: {} {} ({})",
+                "Variable: {} ({})",
                 name.lexeme,
-                name.token_type.to_string(),
-                name.literal.to_string()
+                name.token_type.to_string()
             ),
             While { condition, body } => {
                 format!("while ({}) {}", condition.to_string(), (*body).to_string())

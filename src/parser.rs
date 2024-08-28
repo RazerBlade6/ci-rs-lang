@@ -206,7 +206,7 @@ impl Parser {
 
             let name = match expr {
                 Expr::Variable { name } => name,
-                _ => return Err(format!("Invalid assignment target {}", equals.to_string())),
+                _ => return Err(format!("Invalid assignment target {}", equals.lexeme)),
             };
 
             return Ok(Expr::create_assigment(name, value));

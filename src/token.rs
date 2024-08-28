@@ -126,56 +126,18 @@ impl TokenType {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Literal {
-    Numeric(f64),
-    Str(String),
-    Id(String),
-    Keyword(String),
-    Null,
-}
-
-impl Literal {
-    pub fn to_string(&self) -> &str {
-        match self {
-            Literal::Numeric(_) => return "Numeric",
-            Literal::Str(s) => return s.as_str(),
-            Literal::Id(_) => return "Identifier",
-            Literal::Keyword(s) => return s.as_str(),
-            Literal::Null => return "Null",
-        }
-    }
-
-    pub fn is_null(&self) -> bool {
-        match self {
-            Literal::Null => true,
-            _ => false,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
-    pub literal: Literal,
     pub line: usize,
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, lexeme: &str, literal: Literal, line: usize) -> Self {
+    pub fn new(token_type: TokenType, lexeme: &str, line: usize) -> Self {
         Self {
             token_type,
             lexeme: lexeme.to_string(),
-            literal,
             line,
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        if self.literal.is_null() {
-            return format!("`{}` ({})", self.lexeme, self.token_type.to_string());
-        } else {
-            return format!("`{}`, {}", self.lexeme, self.literal.to_string());
         }
     }
 }

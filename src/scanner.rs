@@ -19,7 +19,7 @@
 //!     let tokens: Vec<Token> = scanner.scan_tokens();
 //! }
 //! ```
-use crate::token::{Literal, Token, TokenType};
+use crate::token::*;
 use lazy_static::*;
 use std::collections::HashMap;
 
@@ -72,7 +72,7 @@ impl Scanner {
             self.scan_token()?;
         }
 
-        let eof_token = Token::new(TokenType::Eof, "", Literal::Null, self.line);
+        let eof_token = Token::new(TokenType::Eof, "", self.line);
         self.tokens.push(eof_token);
         Ok(())
     }
@@ -172,18 +172,18 @@ impl Scanner {
     }
 
     fn add_token_t(&mut self, token_type: TokenType) {
-        self.add_token(token_type, Literal::Null);
+        self.add_token(token_type);
     }
 
-    fn add_token(&mut self, token_type: TokenType, literal: Literal) {
+    fn add_token(&mut self, token_type: TokenType, ) {
         let text = &self.src[self.start..self.current];
-        let token = Token::new(token_type, text, literal, self.line);
+        let token = Token::new(token_type, text,  self.line);
         self.tokens.push(token);
     }
 
-    fn add_token_s(&mut self, token_type: TokenType, literal: Literal, text: &str) {
+    fn add_token_s(&mut self, token_type: TokenType, text: &str) {
         self.tokens
-            .push(Token::new(token_type, text, literal, self.line))
+            .push(Token::new(token_type, text, self.line))
     }
 
     fn number(&mut self) {
@@ -198,10 +198,7 @@ impl Scanner {
             }
         }
 
-        self.add_token(
-            TokenType::Number,
-            Literal::Numeric(self.src[self.start..self.current].parse::<f64>().unwrap()),
-        )
+        self.add_token(TokenType::Number)
     }
 
     fn peek(&self, n: usize) -> char {
@@ -225,7 +222,7 @@ impl Scanner {
         self.advance();
 
         let text = self.src[self.start + 1..self.current - 1].to_string();
-        self.add_token_s(TokenType::String, Literal::Str(text.clone()), &text);
+        self.add_token_s(TokenType::String, &text);
         Ok(())
     }
 
@@ -240,12 +237,7 @@ impl Scanner {
             Some(t) => *t,
             None => TokenType::Identifier,
         };
-
-        let literal = match token_type {
-            TokenType::Identifier => Literal::Id(s.to_string()),
-            _ => Literal::Keyword(s.to_string()),
-        };
-        self.add_token(token_type, literal)
+        self.add_token(token_type)
     }
 
     fn multi_line_comment(&mut self) {

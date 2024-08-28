@@ -14,7 +14,7 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new() -> Self {
         let mut globals = Environment::new();
-        let name = Token::new(TokenType::Fun, "clock", Literal::Null, 0);
+        let name = Token::new(TokenType::Fun, "clock",  0);
         globals.define(
             "clock".to_string(),
             LitValue::Callable {
@@ -26,7 +26,7 @@ impl Interpreter {
         globals.define(
             "clear".to_string(),
             LitValue::Callable {
-                name: Token::new(TokenType::Fun, "clear", Literal::Null, 0),
+                name: Token::new(TokenType::Fun, "clear", 0),
                 arity: 0,
                 fun: Rc::from(clear),
             },

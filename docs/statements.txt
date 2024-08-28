@@ -2,11 +2,13 @@ program        → statement* EOF ;
 
 block          → "{" declaration* "}" ;
 
-declaration    → varDecl
+declaration    → funDecl
+               | varDecl
                | statement ;
 
 varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
-
+funDecl        → "fun" function ;
+function       → IDENTIFIER "(" parameters? ")" block ;
                
 statement      → exprStmt
                | forStmt
