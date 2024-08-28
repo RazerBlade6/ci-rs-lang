@@ -1,9 +1,9 @@
 mod environment;
 mod expr;
 mod interpreter;
+mod native;
 mod parser;
 mod scanner;
-mod native;
 mod stmt;
 mod token;
 
@@ -48,20 +48,8 @@ fn run_prompt() -> Result<(), String> {
         if &buffer == "\n" || &buffer == "\r\n" {
             println!("");
             continue;
-        } //else if &buffer[0..7] == "command" {
-        //     let buffer = &buffer[8..];
-        //     let split = buffer.find(" ").unwrap_or(buffer.len());
-        //     let command = &buffer[..split];
-        //     let args = buffer.split(' ').collect::<Vec<&str>>()[1..].to_vec();
-        //     println!("Command: {command}");
-        //     for arg in &args {
-        //         println!("{arg}");
-        //     }
-        //     execute(command, args)?;
-
-        //     continue;
-        // }
-
+        } 
+        
         match run(buffer.trim(), &mut interpreter) {
             Ok(_) => (),
             Err(msg) => println!("\nERROR:\n{msg}\n"),

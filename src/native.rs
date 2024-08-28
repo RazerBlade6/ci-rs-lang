@@ -1,6 +1,5 @@
-use std::process::Command;
-use chrono::prelude::*;
 use crate::expr::LitValue;
+use std::process::Command;
 
 pub fn clock(_args: Vec<LitValue>) -> LitValue {
     LitValue::Number(
@@ -11,18 +10,12 @@ pub fn clock(_args: Vec<LitValue>) -> LitValue {
     )
 }
 
-pub fn date(_args: Vec<LitValue>) -> LitValue {
-    LitValue::Str(
-        Utc::now().to_string()
-    )
-}
-
 pub fn clear(_args: Vec<LitValue>) -> LitValue {
     Command::new(match std::env::consts::OS {
         "windows" => "powershell",
         "macos" => "terminal",
         "linux" => "sh",
-        other => panic!("Not implemented for {other}")
+        other => panic!("Not implemented for {other}"),
     })
     .arg("clear")
     .output()

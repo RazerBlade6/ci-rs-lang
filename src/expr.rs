@@ -357,11 +357,7 @@ impl Expr {
                     arguments.push(arg.evaluate(environment.clone())?);
                 }
                 match callee {
-                    Callable {
-                        name,
-                        arity,
-                        fun,
-                    } => {
+                    Callable { name, arity, fun } => {
                         if args.len() != arity {
                             return Err(format!(
                                 "fun `{}` expected {} arguments but got {}",

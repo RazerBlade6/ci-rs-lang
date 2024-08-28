@@ -24,12 +24,12 @@ impl Interpreter {
             },
         );
         globals.define(
-            "clear".to_string(), 
-            LitValue::Callable { 
-                name: Token::new(TokenType::Fun, "clear", Literal::Null, 0), 
-                arity: 0, 
-                fun: Rc::from(clear) 
-            }
+            "clear".to_string(),
+            LitValue::Callable {
+                name: Token::new(TokenType::Fun, "clear", Literal::Null, 0),
+                arity: 0,
+                fun: Rc::from(clear),
+            },
         );
         Self {
             environment: Rc::new(RefCell::new(globals)),

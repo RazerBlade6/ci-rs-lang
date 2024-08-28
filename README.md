@@ -10,6 +10,6 @@ Please drop a comment if you feel there is somewhere I could be improving (there
 
 Cheers
 
-P.S. Huge, heartfelt thanks to CodeScope, who has done this project already, and who I took help from when I was well and truly stuck designing While Loops.
+P.S. Huge, heartfelt thanks to CodeScope, who has done this project already, and who I took help from when I was well and truly stuck designing functions.
 
-Please check their series out here : (<https://www.youtube.com/playlist?list=PLj_VrUwyDuXS4K3n7X4U4qmkjpuA8rJ76>)
+Please check their series out here: (<https://www.youtube.com/playlist?list=PLj_VrUwyDuXS4K3n7X4U4qmkjpuA8rJ76>)
