@@ -2,10 +2,11 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::environment::Environment;
-use crate::expr::LitValue;
+use crate::expr::Literal;
 use crate::native::*;
 use crate::stmt::Stmt;
 use crate::token::*;
+use crate::callable::Callables;
 
 pub struct Interpreter {
     environment: Rc<RefCell<Environment>>,
@@ -17,23 +18,27 @@ impl Interpreter {
         let name = Token::new(TokenType::Fun, "clock",  0);
         globals.define(
             "clock".to_string(),
-            LitValue::Callable {
+            Literal::Callable(Callables::NativeFunction {
                 name,
                 arity: 0,
                 fun: Rc::from(clock),
-            },
+            })
         );
         globals.define(
             "clear".to_string(),
-            LitValue::Callable {
+            Literal::Callable( Callables::NativeFunction {
                 name: Token::new(TokenType::Fun, "clear", 0),
                 arity: 0,
                 fun: Rc::from(clear),
-            },
+            }),
         );
         Self {
             environment: Rc::new(RefCell::new(globals)),
         }
+    }
+
+    pub fn new_with_env(environment: Environment) -> Self {
+        Self { environment: Rc::new(RefCell::new(environment)) }
     }
 
     pub fn interpret(&mut self, statements: Vec<&Stmt>) -> Result<(), String> {
@@ -68,7 +73,7 @@ impl Interpreter {
                 println!("{}", result.to_string());
             }
             Stmt::Var { name, initializer } => {
-                let value: LitValue = initializer.evaluate(self.environment.clone())?;
+                let value: Literal = initializer.evaluate(self.environment.clone())?;
 
                 self.environment
                     .borrow_mut()
@@ -80,8 +85,10 @@ impl Interpreter {
                 }
             }
             Stmt::Block { statements } => {
-                let mut environment = Environment::new();
-                environment.enclosing = Some(self.environment.clone());
+                // let mut environment = Environment::new();
+                // environment.enclosing = Some(self.environment.clone());
+
+                let environment = self.environment.borrow_mut().enclose();
                 let old_environment = self.environment.clone();
                 self.environment = Rc::new(RefCell::new(environment));
                 let result = self.interpret((*statements).iter().map(|b| b).collect());

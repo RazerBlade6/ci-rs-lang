@@ -1,25 +1,26 @@
-use crate::expr::LitValue;
-use std::process::Command;
+use crate::expr::Literal;
 
-pub fn clock(_args: Vec<LitValue>) -> LitValue {
-    LitValue::Number(
-        std::time::SystemTime::now()
-            .duration_since(std::time::SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs_f64(),
-    )
+pub fn clock(_args: Vec<Literal>) -> Result<Literal, String> {
+    use std::time::SystemTime;
+
+    match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+        Ok(d) => Ok(Literal::Number(d.as_secs_f64())),
+        Err(msg) => Err(msg.to_string())
+    }
 }
 
-pub fn clear(_args: Vec<LitValue>) -> LitValue {
-    Command::new(match std::env::consts::OS {
+pub fn clear(_args: Vec<Literal>) -> Result<Literal, String> {
+    use std::{process::Command, env::consts::OS};
+
+    match Command::new(match OS {
         "windows" => "powershell",
         "macos" => "terminal",
         "linux" => "sh",
-        other => panic!("Not implemented for {other}"),
+        _ => return Err("Commands only implemented for windows, macos and linux".to_string()),
     })
     .arg("clear")
-    .output()
-    .unwrap();
-
-    LitValue::Nil
+    .output() {
+        Ok(_) => Ok(Literal::Nil),
+        Err(msg) => Err(msg.to_string()),
+    }
 }

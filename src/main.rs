@@ -6,6 +6,7 @@ mod parser;
 mod scanner;
 mod stmt;
 mod token;
+mod callable;
 
 use interpreter::Interpreter;
 use parser::*;

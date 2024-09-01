@@ -1,68 +1,59 @@
+use crate::callable::Callables;
 use crate::environment::Environment;
+use crate::interpreter::Interpreter;
+use crate::stmt::Stmt;
 use crate::token::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 #[derive(Clone)]
-pub enum LitValue {
+pub enum Literal {
     Number(f64),
     Str(String),
     Boolean(bool),
     Nil,
-    // Full credit to CodeScope for this whole thing, there's no way in hell I would've gotten this without him.
-    // I mean seriously wtf is an Rc<dyn Fn> ?
-    Callable {
-        name: Token,
-        arity: usize,
-        fun: Rc<dyn Fn(Vec<LitValue>) -> LitValue>,
-    },
+    Callable(Callables)
 }
 
-impl PartialEq for LitValue {
+impl PartialEq for Literal {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Number(l0), Self::Number(r0)) => l0 == r0,
             (Self::Str(l0), Self::Str(r0)) => l0 == r0,
             (Self::Boolean(l0), Self::Boolean(r0)) => l0 == r0,
-            (
-                Self::Callable {name: _, arity: _, fun: _ },
-                Self::Callable {name: _, arity: _, fun: _,},
-            ) => panic!("Invalid Syntax: Attempted to compare Callable"),
+            (Self::Callable(_), Self::Callable(_)) => panic!("Parsing Error: Attempted to compare callable"), 
             _ => core::mem::discriminant(self) == core::mem::discriminant(other),
         }
     }
 }
 
-impl std::fmt::Debug for LitValue {
+impl std::fmt::Debug for Literal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Number(arg0) => f.debug_tuple("Number").field(arg0).finish(),
             Self::Str(arg0) => f.debug_tuple("Str").field(arg0).finish(),
             Self::Boolean(arg0) => f.debug_tuple("Boolean").field(arg0).finish(),
             Self::Nil => write!(f, "Nil"),
-            Self::Callable { name, arity, fun: _ } => f
-                .debug_struct("Callable")
-                .field("name", name)
-                .field("arity", arity)
-                .finish(),
+            Self::Callable(callable) => {
+                match callable {
+                    Callables::LoxFunction { name, params: _, arity: _, body: _, environment: _ } => f.debug_tuple("<function>").field(name).finish(),
+                    Callables::NativeFunction { name, arity: _, fun: _} => f.debug_tuple("<native function> ").field(name).finish(),
+                }
+            }
         }
     }
 }
 
-use LitValue::*;
+use {Literal::*, Callables::*};
 
-impl LitValue {
+impl Literal {
     pub fn to_string(&self) -> String {
         match self {
             Number(n) => return format!("{:.5}", n),
             Str(s) => return s.to_string(),
             Boolean(b) => return format!("{b}"),
             Nil => return String::from("nil"),
-            Self::Callable {
-                name,
-                arity,
-                fun: _,
-            } => return format!("{}({} args), ", name.lexeme, arity),
+            Self::Callable(_) => String::from("Callable")
         }
     }
 
@@ -72,7 +63,8 @@ impl LitValue {
             Str(_) => return "String",
             Boolean(_) => return "Boolean",
             Nil => return "nil",
-            Callable { name: _, arity: _, fun: _ } => return "<function>",
+            Callable(LoxFunction { name: _, params: _, arity: _, body: _, environment: _ }) => return "<function>",
+            Callable(NativeFunction { name: _, arity: _, fun: _ }) => return "<native function>"
         }
     }
 
@@ -91,17 +83,13 @@ impl LitValue {
         }
     }
 
-    pub fn is_falsy(&self) -> LitValue {
+    pub fn is_falsy(&self) -> Literal {
         match self {
             Number(x) => Boolean(*x == 0.0),
             Str(s) => Boolean(s.len() == 0),
             Boolean(b) => Boolean(*b),
             Nil => Boolean(true),
-            Callable {
-                name: _,
-                arity: _,
-                fun: _,
-            } => panic!("Invalid Syntax: attempted to check falsy-ness of Callable"),
+            Callable(_) => panic!("Invalid Syntax: attempted to check falsy-ness of Callable"),
         }
     }
 
@@ -111,11 +99,7 @@ impl LitValue {
             Str(s) => return s.len() != 0,
             Boolean(b) => return *b,
             Nil => return false,
-            Callable {
-                name: _,
-                arity: _,
-                fun: _,
-            } => panic!("Invalid Syntax: attempted to check truthy-ness of Callable"),
+            Callable(_) => panic!("Invalid Syntax: attempted to check truthy-ness of Callable"),
         }
     }
 }
@@ -136,7 +120,7 @@ pub enum Expr {
         args: Vec<Expr>,
     },
     Literal {
-        literal: LitValue,
+        literal: Literal,
     },
     Logical {
         left: Box<Expr>,
@@ -220,7 +204,7 @@ impl Expr {
         }
     }
 
-    pub fn create_literal(literal: LitValue) -> Self {
+    pub fn create_literal(literal: Literal) -> Self {
         Self::Literal { literal }
     }
 
@@ -258,7 +242,7 @@ impl Expr {
         }
     }
 
-    pub fn evaluate(&self, environment: Rc<RefCell<Environment>>) -> Result<LitValue, String> {
+    pub fn evaluate(&self, environment: Rc<RefCell<Environment>>) -> Result<Literal, String> {
         match &self {
             Expr::Literal { literal } => Ok((*literal).clone()),
 
@@ -294,7 +278,7 @@ impl Expr {
         environment: Rc<RefCell<Environment>>,
         operator: &Token,
         right: &Box<Expr>,
-    ) -> Result<LitValue, String> {
+    ) -> Result<Literal, String> {
         let right = (*right).evaluate(environment)?;
 
         match (&right, operator.token_type) {
@@ -315,7 +299,7 @@ impl Expr {
         left: &Box<Expr>,
         operator: &Token,
         right: &Box<Expr>,
-    ) -> Result<LitValue, String> {
+    ) -> Result<Literal, String> {
         let left = (*left).evaluate(environment.clone())?;
         let right = (*right).evaluate(environment)?;
 
@@ -334,7 +318,7 @@ impl Expr {
 
             (Number(x), TokenType::Greater, Number(y)) => Ok(Boolean(x > y)),
 
-            (Number(x), TokenType::GreaterEqual, Number(y)) =>Ok(Boolean(x >= y)),
+            (Number(x), TokenType::GreaterEqual, Number(y)) => Ok(Boolean(x >= y)),
 
             (Number(x), TokenType::Less, Number(y)) => Ok(Boolean(x < y)),
 
@@ -353,7 +337,7 @@ impl Expr {
         }
     }
 
-    fn evaluate_assignment(environment: Rc<RefCell<Environment>>, name: &Token, value: &Expr) -> Result<LitValue, String> {
+    fn evaluate_assignment(environment: Rc<RefCell<Environment>>, name: &Token, value: &Expr) -> Result<Literal, String> {
         let new_value = (*value).evaluate(environment.clone())?;
         environment
             .borrow_mut()
@@ -362,8 +346,8 @@ impl Expr {
         Ok(new_value)
     }
     
-    fn evaluate_logical(environment: Rc<RefCell<Environment>>, left: &Expr, operator: &Token, right: &Expr) -> Result<LitValue, String> {
-        let left: LitValue = left.evaluate(environment.clone())?;
+    fn evaluate_logical(environment: Rc<RefCell<Environment>>, left: &Expr, operator: &Token, right: &Expr) -> Result<Literal, String> {
+        let left: Literal = left.evaluate(environment.clone())?;
         if operator.token_type == TokenType::Or {
             if left.is_truthy() {
                 return Ok(left);
@@ -377,9 +361,8 @@ impl Expr {
         return right.evaluate(environment);
     }
 
-    fn evaluate_call(environment: Rc<RefCell<Environment>>, callee: &Expr, _paren: &Token, args: &[Expr]) -> Result<LitValue, String> {
+    fn evaluate_call(environment: Rc<RefCell<Environment>>, callee: &Expr, _paren: &Token, args: &[Expr]) -> Result<Literal, String> {
         let callee = (*callee).evaluate(environment.clone())?;
-        let retval: LitValue;
      
         let mut arguments = vec![];
         for arg in args {
@@ -387,15 +370,40 @@ impl Expr {
         }
 
         match callee {
-            Callable { name, arity, fun } => {
-                if args.len() != arity {
-                    return Err(format!("fun `{}` expected {} arguments but got {}", name.lexeme, arity, args.len()));
-                }
-                retval = fun(arguments)
-            }
-            other => return Err(format!("{} cannot be called", other.to_type())),
+            Callable(callable) => match callable {
+                LoxFunction { name, params, arity, body, environment } => return Self::call_function(name, params, arity, body, environment, arguments),
+                NativeFunction { name, arity, fun } => return Self::call_native(name, arity, fun, arguments),
+            },
+            other => return Err(format!("Could not call {}", other.to_type())) 
+        }
+    }
+    
+    fn call_function(name: Token, params: Vec<Token>, arity: usize, body: Vec<Stmt>, environment: Rc<RefCell<Environment>>, arguments: Vec<Literal>) -> Result<Literal, String> {
+        if arguments.len() != arity {
+            return Err(format!("Function {} expected {} arguments but got {}", name.lexeme, arity, arguments.len()));
+        }
+        let mut environment = environment.borrow().enclose();
+        for (index, value) in arguments.iter().enumerate() {
+            environment.define(params[index].lexeme.clone(), value.clone());
         }
 
-        Ok(retval)
+        let mut interpreter = Interpreter::new_with_env(environment);
+
+        for statement in &body {
+            let result = interpreter.interpret(vec![statement]);
+            if let Err(e) = result {
+                return Err(e);
+            } 
+        }
+
+        Ok(Literal::Nil)
+
+    }
+    
+    fn call_native(name: Token, arity: usize, fun: Rc<dyn Fn(Vec<Literal>) -> Result<Literal, String>>, arguments: Vec<Literal>) -> Result<Literal, String> {
+        if arguments.len() != arity {
+            return Err(format!("Native function {} expected {} arguments but got {}", name.lexeme, arity, arguments.len()));
+        }
+        Ok(fun(arguments)?)
     }
 }

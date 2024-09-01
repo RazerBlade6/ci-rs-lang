@@ -55,7 +55,7 @@ impl Parser {
         if self.match_tokens(&[TokenType::Equal]) {
             initializer = self.expression()?;
         } else {
-            initializer = Expr::create_literal(LitValue::Nil);
+            initializer = Expr::create_literal(Literal::Nil);
         }
 
         self.consume(
@@ -123,7 +123,7 @@ impl Parser {
 
         let condition = match condition {
             None => Expr::Literal {
-                literal: LitValue::Boolean(true),
+                literal: Literal::Boolean(true),
             },
             Some(c) => c,
         };
@@ -328,6 +328,7 @@ impl Parser {
                 }
             }
         }
+
         let paren: Token = self.consume(TokenType::RightParen, "Expected ')' after arguments")?;
         return Ok(Expr::create_call(callee, paren, arguments));
     }
@@ -347,7 +348,7 @@ impl Parser {
             | TokenType::Number
             | TokenType::String => {
                 self.advance();
-                return Ok(Expr::create_literal(LitValue::from_token(token)));
+                return Ok(Expr::create_literal(Literal::from_token(token)));
             }
             TokenType::Identifier => {
                 self.advance();

@@ -9,7 +9,7 @@ var c = "global c";
         print a;  
         print b;  
         print c;  
-        print d;
+        print d; // Will raise an Error!
     }
     print a; 
     print b; 

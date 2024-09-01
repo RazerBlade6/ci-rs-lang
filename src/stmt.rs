@@ -29,7 +29,7 @@ pub enum Stmt {
     Function {
         name: Token,
         params: Vec<Token>,
-        body: Box<Vec<Stmt>>,
+        body: Box<Stmt>,
     },
 }
 
@@ -78,7 +78,7 @@ impl Stmt {
                 params,
                 body: _,
             } => {
-                todo!()
+                format!("<function> {}/{}", name.lexeme, params.len())
             }
         }
     }
