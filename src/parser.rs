@@ -334,7 +334,7 @@ impl Parser {
     }
 
     fn primary(&mut self) -> Result<Expr, String> {
-        let token = self.peek();
+        let token = self.peek().clone();
         match token.token_type {
             TokenType::LeftParen => {
                 self.advance();
@@ -423,8 +423,8 @@ impl Parser {
         self.peek().token_type == TokenType::Eof
     }
 
-    fn peek(&mut self) -> Token {
-        self.tokens[self.current].clone()
+    fn peek(&mut self) -> &Token {
+        &self.tokens[self.current]
     }
 
     fn previous(&mut self) -> Token {

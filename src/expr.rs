@@ -21,7 +21,9 @@ impl PartialEq for Literal {
             (Self::Number(l0), Self::Number(r0)) => l0 == r0,
             (Self::Str(l0), Self::Str(r0)) => l0 == r0,
             (Self::Boolean(l0), Self::Boolean(r0)) => l0 == r0,
-            (Self::Callable(_), Self::Callable(_)) => panic!("Parsing Error: Attempted to compare callable"), 
+            // TODO: Figure out a better way to handle this than panicking or defaulting to false
+            // Maybe we can compare the function signatures as a standin for comparing the function pointers?
+            (Self::Callable(_), Self::Callable(_)) => false, 
             _ => core::mem::discriminant(self) == core::mem::discriminant(other),
         }
     }
@@ -281,16 +283,16 @@ impl Expr {
     ) -> Result<Literal, String> {
         let right = (*right).evaluate(environment)?;
 
-        match (&right, operator.token_type) {
-            (Number(x), TokenType::Minus) => return Ok(Number(-x)),
-            (_, TokenType::Minus) => {
+        match (operator.token_type, &right) {
+            (TokenType::Minus, Number(x)) => return Ok(Number(-x)),
+            (TokenType::Minus, _) => {
                 return Err(format!(
                     "negation not implemented for {}",
                     right.to_type()
                 ))
             }
-            (any, TokenType::Bang) => Ok(any.is_falsy()),
-            _ => panic!("Invalid syntax: should never reach here!"),
+            (TokenType::Bang, any) => Ok(any.is_falsy()),
+            _ => panic!("Invalid syntax: Parser specified non-unary expression as unary!"),
         }
     }
 
@@ -304,13 +306,13 @@ impl Expr {
         let right = (*right).evaluate(environment)?;
 
         match (&left, operator.token_type, &right) {
+            (Number(x), TokenType::Plus, Number(y)) => Ok(Number(x + y)),
+
             (Number(x), TokenType::Minus, Number(y)) => Ok(Number(x - y)),
 
             (Number(x), TokenType::Star, Number(y)) => Ok(Number(x * y)),
 
             (Number(x), TokenType::Slash, Number(y)) => Ok(Number(x / y)),
-
-            (Number(x), TokenType::Plus, Number(y)) => Ok(Number(x + y)),
 
             (Number(x), TokenType::Percent, Number(y)) => Ok(Number(x % y)),
 
@@ -342,7 +344,6 @@ impl Expr {
         environment
             .borrow_mut()
             .assign(&name.lexeme, new_value.clone())?;
-
         Ok(new_value)
     }
     
@@ -382,12 +383,13 @@ impl Expr {
         if arguments.len() != arity {
             return Err(format!("Function {} expected {} arguments but got {}", name.lexeme, arity, arguments.len()));
         }
-        let mut environment = environment.borrow().enclose();
+        let mut env = Environment::new();
+        env.enclosing = Some(environment.clone());
         for (index, value) in arguments.iter().enumerate() {
-            environment.define(params[index].lexeme.clone(), value.clone());
+            env.define(params[index].lexeme.clone(), value.clone());
         }
 
-        let mut interpreter = Interpreter::new_with_env(environment);
+        let mut interpreter = Interpreter::new_with_env(env);
 
         for statement in &body {
             let result = interpreter.interpret(vec![statement]);

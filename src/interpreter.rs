@@ -85,10 +85,10 @@ impl Interpreter {
                 }
             }
             Stmt::Block { statements } => {
-                // let mut environment = Environment::new();
-                // environment.enclosing = Some(self.environment.clone());
+                let mut environment = Environment::new();
+                environment.enclosing = Some(self.environment.clone());
 
-                let environment = self.environment.borrow_mut().enclose();
+                // let environment = self.environment.borrow_mut().enclose();
                 let old_environment = self.environment.clone();
                 self.environment = Rc::new(RefCell::new(environment));
                 let result = self.interpret((*statements).iter().map(|b| b).collect());
