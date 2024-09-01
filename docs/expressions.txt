@@ -1,10 +1,13 @@
 expression     → literal
+               | 
                | unary
                | binary
-               | grouping ;
-expression     → assignment ;
+               | grouping 
+               | logic_and
+               | logic_or
+               | assignment;
+
 assignment     → IDENTIFIER "=" assignment
-               | logic_or ;
 logic_or       → logic_and ( "or" logic_and )* ;
 logic_and      → equality ( "and" equality )* ;
 literal        → NUMBER | STRING | "true" | "false" | "nil" ;
@@ -12,11 +15,11 @@ grouping       → "(" expression ")" ;
 unary          → ( "-" | "!" ) expression ;
 binary         → expression operator expression ;
 operator       → "==" | "!=" | "<" | "<=" | ">" | ">="
-               | "+"  | "-"  | "*" | "/" | "%";
+               | "+"  | "-"  | "*" | "/"  | "%";
 call           → primary ( "(" arguments? ")" )* ; 
 
 Precedence Rules: Highest to Lowest
-    | 1. () |               → Call
+    | 1. ()                 → Call
     | 2. !  | -             → Unary
     | 3. /  | *  | %        → Factor
     | 4. +  | -             → Term

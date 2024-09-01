@@ -10,6 +10,7 @@ use crate::callable::Callables;
 
 pub struct Interpreter {
     environment: Rc<RefCell<Environment>>,
+    pub ret: Option<Literal>
 }
 
 impl Interpreter {
@@ -34,11 +35,12 @@ impl Interpreter {
         );
         Self {
             environment: Rc::new(RefCell::new(globals)),
+            ret: None
         }
     }
 
     pub fn new_with_env(environment: Environment) -> Self {
-        Self { environment: Rc::new(RefCell::new(environment)) }
+        Self { environment: Rc::new(RefCell::new(environment)), ret: None }
     }
 
     pub fn interpret(&mut self, statements: Vec<&Stmt>) -> Result<(), String> {
@@ -95,8 +97,23 @@ impl Interpreter {
                 self.environment = old_environment;
                 result?
             }
-            #[allow(unused)]
-            Stmt::Function { name, params, body } => todo!(),
+            Stmt::Function { name, params, body } => {
+                let value = Callables::LoxFunction { 
+                    name: name.clone(), 
+                    params: params.clone(), 
+                    arity: params.len(), 
+                    body: body.clone(),
+                    environment: self.environment.clone() 
+                };
+
+                self.environment.borrow_mut().define(name.lexeme.to_string(), Literal::Callable(value));
+            },
+            Stmt::Return { keyword: _, value } => {
+                self.ret = match value {
+                    Some(e) => Some(e.evaluate(self.environment.clone())?),
+                    None => Some(Literal::Nil)
+                };
+            }   
         };
 
         Ok(())

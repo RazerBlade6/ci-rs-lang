@@ -10,6 +10,6 @@
 6.  Variables are declared with var
 7.  Supports If-Else blocks
 8.  Support for and while loops
-================== TODO ================================
 9.  Functions are declared with fun function_name(...) and are called with function_name(...)
+================== TODO ================================
 10. Supports Object-Oriented Programming, with Classes, Objects, Polymorphism And Inheritance

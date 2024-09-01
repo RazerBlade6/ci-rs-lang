@@ -15,6 +15,10 @@ pub enum Stmt {
     Print {
         expr: Expr,
     },
+    Return {
+        keyword: Token,
+        value: Option<Expr>
+    },
     Var {
         name: Token,
         initializer: Expr,
@@ -29,7 +33,7 @@ pub enum Stmt {
     Function {
         name: Token,
         params: Vec<Token>,
-        body: Box<Stmt>,
+        body: Vec<Stmt>,
     },
 }
 
@@ -72,14 +76,17 @@ impl Stmt {
                     else_branch
                 )
             }
-            #[allow(unused)]
             Function {
                 name,
                 params,
                 body: _,
             } => {
                 format!("<function> {}/{}", name.lexeme, params.len())
-            }
+            },
+            Return { keyword: _, value } => format!("returning {}", match value {
+                Some(e) => e.to_string(),
+                None => "".to_string()
+            })
         }
     }
 }

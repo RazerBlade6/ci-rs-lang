@@ -383,23 +383,26 @@ impl Expr {
         if arguments.len() != arity {
             return Err(format!("Function {} expected {} arguments but got {}", name.lexeme, arity, arguments.len()));
         }
+
         let mut env = Environment::new();
         env.enclosing = Some(environment.clone());
         for (index, value) in arguments.iter().enumerate() {
             env.define(params[index].lexeme.clone(), value.clone());
         }
-
+        
         let mut interpreter = Interpreter::new_with_env(env);
 
         for statement in &body {
             let result = interpreter.interpret(vec![statement]);
             if let Err(e) = result {
                 return Err(e);
-            } 
+            }
+            if let Some(ret) = interpreter.ret.clone() {
+                return Ok(ret);
+            }
+
         }
-
         Ok(Literal::Nil)
-
     }
     
     fn call_native(name: Token, arity: usize, fun: Rc<dyn Fn(Vec<Literal>) -> Result<Literal, String>>, arguments: Vec<Literal>) -> Result<Literal, String> {

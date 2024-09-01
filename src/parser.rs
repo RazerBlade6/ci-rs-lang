@@ -40,13 +40,34 @@ impl Parser {
         } else {
             self.statement()
         };
-
         result
     }
 
     fn function(&mut self, kind: &str) -> Result<Stmt, String> {
-        let _ = kind;
-        todo!()
+        let name = self.consume(TokenType::Identifier, &format!("Expected {kind} name"))?;
+        self.consume(TokenType::LeftParen, &format!("Expected '(' after {kind} name"))?;
+
+        let mut params = vec![];
+        if !self.check(&TokenType::RightParen) {
+            loop {
+                if params.len() >= 255 {
+                    return Err(format!("Line {}: Cant have more than 255 arguments", self.peek().line));
+                }
+                params.push(self.consume(TokenType::Identifier, "Expected parameter name")?);
+                if !self.match_tokens(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+        self.consume(TokenType::RightParen, "Expected ')' after parameters.")?;
+        self.consume(TokenType::LeftBrace, &format!("Expected '{{' before {kind} body."))?;
+
+        let body = match self.block()? {
+            Stmt::Block { statements } => statements,
+            _ => panic!("Block statement parsed something that was not a block"),
+        };
+        
+        Ok(Stmt::Function { name, params, body })
     }
 
     fn var_declaration(&mut self) -> Result<Stmt, String> {
@@ -58,10 +79,7 @@ impl Parser {
             initializer = Expr::create_literal(Literal::Nil);
         }
 
-        self.consume(
-            TokenType::SemiColon,
-            "Expected ';' after variable declaration",
-        )?;
+        self.consume(TokenType::SemiColon, "Expected ';' after variable declaration",)?;
 
         Ok(Stmt::Var { name, initializer })
     }
@@ -75,6 +93,9 @@ impl Parser {
         }
         if self.match_tokens(&[TokenType::Print]) {
             return self.print_statement();
+        }
+        if self.match_tokens(&[TokenType::Return]) {
+            return self.return_statement();
         }
         if self.match_tokens(&[TokenType::While]) {
             return self.while_statement();
@@ -169,6 +190,16 @@ impl Parser {
         })
     }
 
+    fn return_statement(&mut self) -> Result<Stmt, String> {
+        let keyword = self.previous();
+        let value = match self.check(&TokenType::SemiColon) {
+            true => None,
+            false => Some(self.expression()?)
+        };
+        self.consume(TokenType::SemiColon, "Expected ';' after return value")?;
+        Ok(Stmt::Return { keyword, value })
+    }
+
     fn print_statement(&mut self) -> Result<Stmt, String> {
         let expr: Expr = self.expression()?;
         self.consume(TokenType::SemiColon, "Expected ';' after value")?;
@@ -182,9 +213,7 @@ impl Parser {
         }
 
         self.consume(TokenType::RightBrace, "Expected '}' after block")?;
-        Ok(Stmt::Block {
-            statements: statements,
-        })
+        Ok(Stmt::Block { statements })
     }
 
     fn expr_statement(&mut self) -> Result<Stmt, String> {
@@ -203,15 +232,12 @@ impl Parser {
         if self.match_tokens(&[TokenType::Equal]) {
             let equals = self.previous();
             let value = self.assigment()?;
-
             let name = match expr {
                 Expr::Variable { name } => name,
                 _ => return Err(format!("Invalid assignment target {}", equals.lexeme)),
             };
-
             return Ok(Expr::create_assigment(name, value));
         }
-
         Ok(expr)
     }
 
