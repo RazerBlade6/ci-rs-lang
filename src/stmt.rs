@@ -1,7 +1,6 @@
 use crate::expr::Expr;
 use crate::token::Token;
 
-#[allow(unused)]
 #[derive(Debug, Clone)]
 pub enum Stmt {
     Expression {
@@ -16,12 +15,11 @@ pub enum Stmt {
         expr: Expr,
     },
     Return {
-        keyword: Token,
         value: Option<Expr>
     },
     Var {
         name: Token,
-        initializer: Expr,
+        initializer: Option<Expr>,
     },
     While {
         condition: Expr,
@@ -83,7 +81,7 @@ impl Stmt {
             } => {
                 format!("<function> {}/{}", name.lexeme, params.len())
             },
-            Return { keyword: _, value } => format!("returning {}", match value {
+            Return { value } => format!("returning {}", match value {
                 Some(e) => e.to_string(),
                 None => "".to_string()
             })

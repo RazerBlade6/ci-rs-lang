@@ -4,11 +4,12 @@ use crate::{expr::*, Token, TokenType};
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
+    index: usize
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, current: 0 }
+        Self { tokens, current: 0, index: 0 }
     }
 
     pub fn parse(&mut self) -> Result<Vec<Stmt>, String> {
@@ -30,6 +31,12 @@ impl Parser {
         } else {
             Err(errors.join("\n"))
         }
+    }
+
+    fn index(&mut self) -> usize {
+        let index = self.index;
+        self.index += 1;
+        index
     }
 
     fn declaration(&mut self) -> Result<Stmt, String> {
@@ -72,11 +79,11 @@ impl Parser {
 
     fn var_declaration(&mut self) -> Result<Stmt, String> {
         let name: Token = self.consume(TokenType::Identifier, "Expected variable name")?;
-        let initializer: Expr;
+        let initializer: Option<Expr>;
         if self.match_tokens(&[TokenType::Equal]) {
-            initializer = self.expression()?;
+            initializer = Some(self.expression()?);
         } else {
-            initializer = Expr::create_literal(Literal::Nil);
+            initializer = None;
         }
 
         self.consume(TokenType::SemiColon, "Expected ';' after variable declaration",)?;
@@ -191,13 +198,12 @@ impl Parser {
     }
 
     fn return_statement(&mut self) -> Result<Stmt, String> {
-        let keyword = self.previous();
         let value = match self.check(&TokenType::SemiColon) {
             true => None,
             false => Some(self.expression()?)
         };
         self.consume(TokenType::SemiColon, "Expected ';' after return value")?;
-        Ok(Stmt::Return { keyword, value })
+        Ok(Stmt::Return { value })
     }
 
     fn print_statement(&mut self) -> Result<Stmt, String> {
@@ -233,7 +239,7 @@ impl Parser {
             let equals = self.previous();
             let value = self.assigment()?;
             let name = match expr {
-                Expr::Variable { name } => name,
+                Expr::Variable { index: _, name } => name,
                 _ => return Err(format!("Invalid assignment target {}", equals.lexeme)),
             };
             return Ok(Expr::create_assigment(name, value));
@@ -378,7 +384,8 @@ impl Parser {
             }
             TokenType::Identifier => {
                 self.advance();
-                return Ok(Expr::create_variable(self.previous()));
+                let index = self.index();
+                return Ok(Expr::create_variable(self.previous(), index));
             }
             _ => return Err(format!("Line {}: Expected Expression", token.line)),
         }

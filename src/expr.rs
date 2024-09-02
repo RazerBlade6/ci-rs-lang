@@ -134,6 +134,7 @@ pub enum Expr {
         right: Box<Expr>,
     },
     Variable {
+        index: usize,
         name: Token,
     },
     Assignment {
@@ -166,7 +167,7 @@ impl Expr {
             Expr::Unary { operator, right } => {
                 format!("{}{}", operator.lexeme, (*right).to_string())
             }
-            Expr::Variable { name } => name.lexeme.to_string(),
+            Expr::Variable { index: _, name } => name.lexeme.to_string(),
             Expr::Assignment { name, value } => {
                 format!("{} = {}", name.lexeme, (*value).to_string())
             }
@@ -225,8 +226,8 @@ impl Expr {
         }
     }
 
-    pub fn create_variable(name: Token) -> Self {
-        Self::Variable { name }
+    pub fn create_variable(name: Token, index: usize) -> Self {
+        Self::Variable { index, name }
     }
 
     pub fn create_assigment(name: Token, value: Expr) -> Self {
@@ -258,7 +259,7 @@ impl Expr {
                 right,
             } => Self::evaluate_binary(environment, left, operator, right),
 
-            Expr::Variable { name } => environment.borrow().get(name.lexeme.to_string()),
+            Expr::Variable { name, index: _ } => environment.borrow().get(name.lexeme.to_string()),
 
             Expr::Assignment { name, value } => Self::evaluate_assignment(environment, name, value),
 

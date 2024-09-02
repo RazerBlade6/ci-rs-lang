@@ -3,7 +3,6 @@ use crate::{environment::Environment, expr::Literal, Token, stmt::Stmt};
 
 #[derive(Clone)]
 pub enum Callables {
-    #[allow(dead_code)]
     LoxFunction {
         name: Token,
         params: Vec<Token>,

@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::environment::Environment;
@@ -10,6 +11,7 @@ use crate::callable::Callables;
 
 pub struct Interpreter {
     environment: Rc<RefCell<Environment>>,
+    pub locals: HashMap<usize, usize>,
     pub ret: Option<Literal>
 }
 
@@ -34,13 +36,14 @@ impl Interpreter {
             }),
         );
         Self {
+            locals: HashMap::new(),
             environment: Rc::new(RefCell::new(globals)),
             ret: None
         }
     }
 
     pub fn new_with_env(environment: Environment) -> Self {
-        Self { environment: Rc::new(RefCell::new(environment)), ret: None }
+        Self { environment: Rc::new(RefCell::new(environment)), ret: None, locals: HashMap::new() }
     }
 
     pub fn interpret(&mut self, statements: Vec<&Stmt>) -> Result<(), String> {
@@ -75,7 +78,10 @@ impl Interpreter {
                 println!("{}", result.to_string());
             }
             Stmt::Var { name, initializer } => {
-                let value: Literal = initializer.evaluate(self.environment.clone())?;
+                let value: Literal = match initializer {
+                    Some(e) => e.evaluate(self.environment.clone())?,
+                    None => Literal::Nil
+                };
 
                 self.environment
                     .borrow_mut()
@@ -108,7 +114,7 @@ impl Interpreter {
 
                 self.environment.borrow_mut().define(name.lexeme.to_string(), Literal::Callable(value));
             },
-            Stmt::Return { keyword: _, value } => {
+            Stmt::Return { value } => {
                 self.ret = match value {
                     Some(e) => Some(e.evaluate(self.environment.clone())?),
                     None => Some(Literal::Nil)
@@ -117,5 +123,10 @@ impl Interpreter {
         };
 
         Ok(())
+    }
+
+    pub fn resolve(&mut self, index: usize, depth: usize) {
+        self.locals.insert(index, depth);
+        
     }
 }

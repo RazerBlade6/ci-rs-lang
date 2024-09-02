@@ -4,6 +4,7 @@ mod interpreter;
 mod native;
 mod parser;
 mod scanner;
+mod resolver;
 mod stmt;
 mod token;
 mod callable;
