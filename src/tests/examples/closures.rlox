@@ -1,0 +1,15 @@
+// --- Test
+var a = "global";
+{
+    fun showA() {
+        print a;
+    }
+
+    showA(); // "global"
+    var a = "block";
+    showA(); // "global"
+}
+
+// --- Expected
+// global
+// block

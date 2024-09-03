@@ -6,7 +6,7 @@ use crate::token::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
     Number(f64),
     Str(String),
@@ -14,38 +14,6 @@ pub enum Literal {
     Nil,
     Callable(Callables)
 }
-
-impl PartialEq for Literal {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Number(l0), Self::Number(r0)) => l0 == r0,
-            (Self::Str(l0), Self::Str(r0)) => l0 == r0,
-            (Self::Boolean(l0), Self::Boolean(r0)) => l0 == r0,
-            // TODO: Figure out a better way to handle this than panicking or defaulting to false
-            // Maybe we can compare the function signatures as a standin for comparing the function pointers?
-            (Self::Callable(_), Self::Callable(_)) => false, 
-            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
-        }
-    }
-}
-
-impl std::fmt::Debug for Literal {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Number(arg0) => f.debug_tuple("Number").field(arg0).finish(),
-            Self::Str(arg0) => f.debug_tuple("Str").field(arg0).finish(),
-            Self::Boolean(arg0) => f.debug_tuple("Boolean").field(arg0).finish(),
-            Self::Nil => write!(f, "Nil"),
-            Self::Callable(callable) => {
-                match callable {
-                    Callables::LoxFunction { name, params: _, arity: _, body: _, environment: _ } => f.debug_tuple("<function>").field(name).finish(),
-                    Callables::NativeFunction { name, arity: _, fun: _} => f.debug_tuple("<native function> ").field(name).finish(),
-                }
-            }
-        }
-    }
-}
-
 use {Literal::*, Callables::*};
 
 impl Literal {

@@ -1,0 +1,29 @@
+// --- Test
+var x = 1534;
+var temp = x;
+var c;
+var b;
+var i = 1;
+
+while (x >= 10) {
+    x = x / 10;
+    i = i * 10;
+}
+
+x = temp;
+
+while (i >= 1) {
+    c = x % i;
+    b = (x - c)/i;
+    
+    print b;
+
+    x = c;
+    i = i / 10;
+}
+
+// --- Expected
+// 1.00000
+// 5.00000
+// 3.00000
+// 4.00000

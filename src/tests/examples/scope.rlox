@@ -1,0 +1,30 @@
+var a = "globl a";
+var b = "globl b";
+var c = "globl c";
+{
+    var a = "outer a";
+    var b = "outer b";
+    {
+        var a = "inner a";
+        print a;  
+        print b;  
+        print c;  
+    }
+    print a; 
+    print b; 
+    print c; 
+}
+print a;
+print b;
+print c;
+
+// --- Expected
+// inner a
+// outer b
+// globl c
+// outer a
+// outer b
+// globl c
+// globl a
+// globl b
+// globl c
