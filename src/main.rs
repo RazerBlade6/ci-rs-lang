@@ -19,6 +19,7 @@ use std::{
 };
 use stmt::Stmt;
 use token::*;
+use resolver::Resolver;
 // use expr::{Expr, LitValue};
 
 fn run_prompt() -> Result<(), String> {
@@ -73,8 +74,13 @@ fn run(src: &str, interpreter: &mut Interpreter) -> Result<(), String> {
     let mut scanner: Scanner = Scanner::new(src);
     scanner.scan_tokens()?;
     let tokens: Vec<Token> = scanner.tokens;
+
     let mut parser: Parser = Parser::new(tokens);
     let statements: Vec<Stmt> = parser.parse()?;
+
+    let mut resolver = Resolver::new();
+    resolver.resolve(&statements.iter().map(|s| s).collect())?;
+    interpreter.resolve(resolver.locals);
     interpreter.interpret(statements.iter().collect())?;
     Ok(())
 }

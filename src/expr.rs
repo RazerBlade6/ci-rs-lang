@@ -3,47 +3,15 @@ use crate::environment::Environment;
 use crate::interpreter::Interpreter;
 use crate::stmt::Stmt;
 use crate::token::*;
-use std::cell::RefCell;
 use std::rc::Rc;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Number(f64),
     Str(String),
     Boolean(bool),
     Nil,
     Callable(Callables)
-}
-
-impl PartialEq for Literal {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Number(l0), Self::Number(r0)) => l0 == r0,
-            (Self::Str(l0), Self::Str(r0)) => l0 == r0,
-            (Self::Boolean(l0), Self::Boolean(r0)) => l0 == r0,
-            // TODO: Figure out a better way to handle this than panicking or defaulting to false
-            // Maybe we can compare the function signatures as a standin for comparing the function pointers?
-            (Self::Callable(_), Self::Callable(_)) => false, 
-            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
-        }
-    }
-}
-
-impl std::fmt::Debug for Literal {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Number(arg0) => f.debug_tuple("Number").field(arg0).finish(),
-            Self::Str(arg0) => f.debug_tuple("Str").field(arg0).finish(),
-            Self::Boolean(arg0) => f.debug_tuple("Boolean").field(arg0).finish(),
-            Self::Nil => write!(f, "Nil"),
-            Self::Callable(callable) => {
-                match callable {
-                    Callables::LoxFunction { name, params: _, arity: _, body: _, environment: _ } => f.debug_tuple("<function>").field(name).finish(),
-                    Callables::NativeFunction { name, arity: _, fun: _} => f.debug_tuple("<native function> ").field(name).finish(),
-                }
-            }
-        }
-    }
 }
 
 use {Literal::*, Callables::*};
@@ -245,7 +213,7 @@ impl Expr {
         }
     }
 
-    pub fn evaluate(&self, environment: Rc<RefCell<Environment>>) -> Result<Literal, String> {
+    pub fn evaluate(&self, environment: Box<Environment>) -> Result<Literal, String> {
         match &self {
             Expr::Literal { literal } => Ok((*literal).clone()),
 
@@ -259,9 +227,9 @@ impl Expr {
                 right,
             } => Self::evaluate_binary(environment, left, operator, right),
 
-            Expr::Variable { name, index: _ } => environment.borrow().get(name.lexeme.to_string()),
+            Expr::Variable { name, index } => environment.get(&name.lexeme, *index),
 
-            Expr::Assignment { name, value } => Self::evaluate_assignment(environment, name, value),
+            Expr::Assignment { name, value } => Self::evaluate_assignment(environment, name, value, self.get_index()),
 
             Expr::Logical {
                 left,
@@ -278,7 +246,7 @@ impl Expr {
     }
 
     fn evaluate_unary(
-        environment: Rc<RefCell<Environment>>,
+        environment: Box<Environment>,
         operator: &Token,
         right: &Box<Expr>,
     ) -> Result<Literal, String> {
@@ -298,7 +266,7 @@ impl Expr {
     }
 
     fn evaluate_binary(
-        environment: Rc<RefCell<Environment>>,
+        environment: Box<Environment>,
         left: &Box<Expr>,
         operator: &Token,
         right: &Box<Expr>,
@@ -340,15 +308,13 @@ impl Expr {
         }
     }
 
-    fn evaluate_assignment(environment: Rc<RefCell<Environment>>, name: &Token, value: &Expr) -> Result<Literal, String> {
-        let new_value = (*value).evaluate(environment.clone())?;
-        environment
-            .borrow_mut()
-            .assign(&name.lexeme, new_value.clone())?;
-        Ok(new_value)
+    fn evaluate_assignment(environment: Box<Environment>, name: &Token, value: &Expr, index: usize) -> Result<Literal, String> {
+        let value = (*value).evaluate(environment.clone())?;
+        environment.assign(&name.lexeme, value.clone(), index)?;
+        Ok(value)
     }
     
-    fn evaluate_logical(environment: Rc<RefCell<Environment>>, left: &Expr, operator: &Token, right: &Expr) -> Result<Literal, String> {
+    fn evaluate_logical(environment: Box<Environment>, left: &Expr, operator: &Token, right: &Expr) -> Result<Literal, String> {
         let left: Literal = left.evaluate(environment.clone())?;
         if operator.token_type == TokenType::Or {
             if left.is_truthy() {
@@ -363,7 +329,7 @@ impl Expr {
         return right.evaluate(environment);
     }
 
-    fn evaluate_call(environment: Rc<RefCell<Environment>>, callee: &Expr, _paren: &Token, args: &[Expr]) -> Result<Literal, String> {
+    fn evaluate_call(environment: Box<Environment>, callee: &Expr, _paren: &Token, args: &[Expr]) -> Result<Literal, String> {
         let callee = (*callee).evaluate(environment.clone())?;
      
         let mut arguments = vec![];
@@ -380,13 +346,13 @@ impl Expr {
         }
     }
     
-    fn call_function(name: Token, params: Vec<Token>, arity: usize, body: Vec<Stmt>, environment: Rc<RefCell<Environment>>, arguments: Vec<Literal>) -> Result<Literal, String> {
+    fn call_function(name: Token, params: Vec<Token>, arity: usize, body: Vec<Stmt>, environment: Box<Environment>, arguments: Vec<Literal>) -> Result<Literal, String> {
         if arguments.len() != arity {
             return Err(format!("Function {} expected {} arguments but got {}", name.lexeme, arity, arguments.len()));
         }
 
-        let mut env = Environment::new();
-        env.enclosing = Some(environment.clone());
+        let mut env = environment.enclose();
+
         for (index, value) in arguments.iter().enumerate() {
             env.define(params[index].lexeme.clone(), value.clone());
         }
@@ -411,5 +377,12 @@ impl Expr {
             return Err(format!("Native function {} expected {} arguments but got {}", name.lexeme, arity, arguments.len()));
         }
         Ok(fun(arguments)?)
+    }
+    
+    fn get_index(&self) -> usize {
+        match self {
+            Expr::Variable { index, name: _ } => return *index,
+            other => panic!("Tried to get index of expr {:?}", other.to_string())
+        }
     }
 }
