@@ -1,49 +1,31 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use crate::environment::Environment;
 use crate::expr::Literal;
-use crate::native::*;
 use crate::stmt::Stmt;
-use crate::token::*;
 use crate::callable::Callables;
 
 pub struct Interpreter {
-    environment: Rc<RefCell<Environment>>,
-    pub locals: HashMap<usize, usize>,
+    pub environment: Environment,
     pub ret: Option<Literal>
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        let mut globals = Environment::new();
-        let name = Token::new(TokenType::Fun, "clock",  0);
-        globals.define(
-            "clock".to_string(),
-            Literal::Callable(Callables::NativeFunction {
-                name,
-                arity: 0,
-                fun: Rc::from(clock),
-            })
-        );
-        globals.define(
-            "clear".to_string(),
-            Literal::Callable( Callables::NativeFunction {
-                name: Token::new(TokenType::Fun, "clear", 0),
-                arity: 0,
-                fun: Rc::from(clear),
-            }),
-        );
         Self {
-            locals: HashMap::new(),
-            environment: Rc::new(RefCell::new(globals)),
+            environment: Environment::new(HashMap::new()),
             ret: None
         }
     }
 
     pub fn new_with_env(environment: Environment) -> Self {
-        Self { environment: Rc::new(RefCell::new(environment)), ret: None, locals: HashMap::new() }
+        Self { environment, ret: None }
+    }
+
+    pub fn resolve(&mut self, locals: HashMap<usize, usize>) {
+        for (k, v) in locals {
+            self.environment.resolve(k, v);
+        }
     }
 
     pub fn interpret(&mut self, statements: Vec<&Stmt>) -> Result<(), String> {
@@ -72,7 +54,7 @@ impl Interpreter {
                     (false, None) => return Ok(()),
                 }
             }
-
+            
             Stmt::Print { expr } => {
                 let result = expr.evaluate(self.environment.clone())?;
                 println!("{}", result.to_string());
@@ -82,10 +64,8 @@ impl Interpreter {
                     Some(e) => e.evaluate(self.environment.clone())?,
                     None => Literal::Nil
                 };
-
-                self.environment
-                    .borrow_mut()
-                    .define(name.lexeme.to_string(), value)
+                   
+                self.environment.define(name.lexeme.to_string(), value)
             }
             Stmt::While { condition, body } => {
                 while condition.evaluate(self.environment.clone())?.is_truthy() {
@@ -93,12 +73,9 @@ impl Interpreter {
                 }
             }
             Stmt::Block { statements } => {
-                let mut environment = Environment::new();
-                environment.enclosing = Some(self.environment.clone());
-
-                // let environment = self.environment.borrow_mut().enclose();
+                let environment = self.environment.enclose();
                 let old_environment = self.environment.clone();
-                self.environment = Rc::new(RefCell::new(environment));
+                self.environment = environment;
                 let result = self.interpret((*statements).iter().map(|b| b).collect());
                 self.environment = old_environment;
                 result?
@@ -109,10 +86,10 @@ impl Interpreter {
                     params: params.clone(), 
                     arity: params.len(), 
                     body: body.clone(),
-                    environment: self.environment.clone() 
+                    environment: self.environment.clone()
                 };
 
-                self.environment.borrow_mut().define(name.lexeme.to_string(), Literal::Callable(value));
+                self.environment.define(name.lexeme.to_string(), Literal::Callable(value));
             },
             Stmt::Return { value } => {
                 self.ret = match value {
@@ -123,10 +100,5 @@ impl Interpreter {
         };
 
         Ok(())
-    }
-
-    pub fn resolve(&mut self, index: usize, depth: usize) {
-        self.locals.insert(index, depth);
-        
     }
 }

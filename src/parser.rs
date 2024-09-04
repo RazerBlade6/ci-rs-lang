@@ -87,7 +87,6 @@ impl Parser {
         }
 
         self.consume(TokenType::SemiColon, "Expected ';' after variable declaration",)?;
-
         Ok(Stmt::Var { name, initializer })
     }
 
@@ -238,11 +237,11 @@ impl Parser {
         if self.match_tokens(&[TokenType::Equal]) {
             let equals = self.previous();
             let value = self.assigment()?;
-            let name = match expr {
-                Expr::Variable { index: _, name } => name,
+            let (name, index) = match expr {
+                Expr::Variable { index, name } => (name, index),
                 _ => return Err(format!("Invalid assignment target {}", equals.lexeme)),
             };
-            return Ok(Expr::create_assigment(name, value));
+            return Ok(Expr::create_assigment(name, value, index));
         }
         Ok(expr)
     }
@@ -384,8 +383,7 @@ impl Parser {
             }
             TokenType::Identifier => {
                 self.advance();
-                let index = self.index();
-                return Ok(Expr::create_variable(self.previous(), index));
+                return Ok(Expr::create_variable(self.previous(), self.index()));
             }
             _ => return Err(format!("Line {}: Expected Expression", token.line)),
         }

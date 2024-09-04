@@ -1,5 +1,5 @@
-use std::{cell::RefCell, rc::Rc, fmt::Debug};
-use crate::{environment::Environment, expr::Literal, Token, stmt::Stmt};
+use crate::{environment::Environment, expr::Literal, stmt::Stmt, Token};
+use std::{fmt::Debug, rc::Rc};
 
 #[derive(Clone)]
 pub enum Callables {
@@ -8,13 +8,13 @@ pub enum Callables {
         params: Vec<Token>,
         arity: usize,
         body: Vec<Stmt>,
-        environment: Rc<RefCell<Environment>>,
+        environment: Environment,
     },
     NativeFunction {
         name: Token,
         arity: usize,
-        fun: Rc<dyn Fn(Vec<Literal>) -> Result<Literal, String>>
-    }
+        fun: Rc<dyn Fn(Vec<Literal>) -> Result<Literal, String>>,
+    },
 }
 
 impl Debug for Callables {

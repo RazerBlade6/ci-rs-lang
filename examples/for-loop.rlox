@@ -1,8 +1,0 @@
-var a = 1;
-var temp;
-
-for (var b = 0; a < 100000; b = temp + b) {
-    print b;
-    temp = a;
-    a = b;
-}

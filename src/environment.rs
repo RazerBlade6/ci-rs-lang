@@ -1,49 +1,118 @@
-use crate::expr::Literal;
+use crate::{callable::Callables, expr::Literal, native::*, Token, TokenType};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 #[derive(Debug, Clone)]
 pub struct Environment {
-    pub enclosing: Option<Rc<RefCell<Environment>>>,
-    map: HashMap<String, Literal>,
+    pub values: Rc<RefCell<HashMap<String, Literal>>>,
+    pub locals: Rc<RefCell<HashMap<usize, usize>>>,
+    pub enclosing: Option<Box<Environment>>,
 }
 
 impl Environment {
-    pub fn new() -> Self {
+    pub fn new(locals: HashMap<usize, usize>) -> Self {
         Self {
-            map: HashMap::new(),
+            values: Rc::from(RefCell::from(Self::globals())),
+            locals: Rc::from(RefCell::from(locals)),
             enclosing: None,
         }
     }
 
-    // pub fn enclose(&self) -> Self {
-    //     Self { 
-    //         enclosing: Some(Rc::new(RefCell::new(self.clone()))), 
-    //         map: self.map.clone() 
-    //     }
-    // }
+    fn globals() -> HashMap<String, Literal> {
+        let mut globals = HashMap::new();
+        let name = Token::new(TokenType::Fun, "clock",  0);
+        globals.insert(
+            "clock".to_string(),
+            Literal::Callable(Callables::NativeFunction {
+                name,
+                arity: 0,
+                fun: Rc::from(clock),
+            })
+        );
+        globals.insert(
+            "clear".to_string(),
+            Literal::Callable( Callables::NativeFunction {
+                name: Token::new(TokenType::Fun, "clear", 0),
+                arity: 0,
+                fun: Rc::from(clear),
+            }),
+        );
 
-    pub fn define(&mut self, name: String, value: Literal) {
-        self.map.insert(name, value);
+        globals
     }
 
-    pub fn get(&self, name: String) -> Result<Literal, String> {
-        match (self.map.get(&name), &self.enclosing) {
-            (Some(literal), _) => {
-                Ok(literal.clone())
-            },
-            (None, Some(env)) => env.borrow_mut().get(name),
-            (None, None) => Err(format!("Undefined Variable '{}'", name)),
+    pub fn resolve(&mut self, index: usize, distance: usize) {
+        self.locals.borrow_mut().insert(index, distance);
+    }
+
+    pub fn enclose(&self) -> Environment {
+        Self {
+            values: Rc::new(RefCell::new(HashMap::new())),
+            locals: self.locals.clone(),
+            enclosing: Some(Box::new(self.clone())),
         }
     }
 
-    pub fn assign(&mut self, name: &str, value: Literal) -> Result<(), String> {
-        match (self.map.get(name), &self.enclosing) {
-            (Some(_), _) => {
-                self.map.insert(name.to_string(), value);
+    pub fn define(&mut self, name: String, value: Literal) {
+        self.values.borrow_mut().insert(name, value);
+    }
+
+    pub fn get(&self, name: &str, index: usize) -> Result<Literal, String> {
+        let distance = self.locals.borrow().get(&index).cloned();
+        match self.get_internal(name, distance) {
+            Some(literal) => Ok(literal),
+            None => Err(format!("Got Undefined variable {}", name))
+        }
+    }
+
+    fn get_internal(&self, name: &str, distance: Option<usize>) -> Option<Literal> {
+        if let None = distance {
+            match &self.enclosing {
+                None => self.values.borrow().get(name).cloned(),
+                Some(env) => env.get_internal(name, distance),
+            }
+        } else {
+            let distance = distance.unwrap();
+            if distance == 0 {
+                self.values.borrow().get(name).cloned()
+            } else {
+                match &self.enclosing {
+                    None => panic!("Tried to resolve a variable that was defined deeper than the current environment depth"),
+                    Some(env) => {
+                        assert!(distance > 0);
+                        env.get_internal(name, Some(distance - 1))
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn assign(&self, name: &str, value: Literal, index: usize) -> Result<(), String> {
+        let distance = self.locals.borrow().get(&index).cloned();
+        self.assign_internal(name, value, distance)
+    }
+
+    fn assign_internal(&self, name: &str, value: Literal, distance: Option<usize>) -> Result<(), String> {
+        if let None = distance {
+            match &self.enclosing {
+                Some(env) => env.assign_internal(name, value, distance),
+                None => match self.values.borrow_mut().insert(name.to_string(), value) {
+                    Some(_) => return Ok(()),
+                    None => return Err(format!("Assigned Undefined variable {}", name)),
+                },
+            }
+        } else {
+            let distance = distance.unwrap();
+            if distance == 0 {
+                self.values.borrow_mut().insert(name.to_string(), value);
+                Ok(())
+            } else {
+                match &self.enclosing {
+                    
+                    None => panic!("Tried to define a variable in a too deep level"),
+                    Some(env) => env.assign_internal(name, value, Some(distance - 1))?,
+                };
                 Ok(())
             }
-            (None, Some(env)) => (env.borrow_mut()).assign(name, value),
-            (None, None) => Err(format!("Undefined Variable {}", name)),
         }
     }
 }
