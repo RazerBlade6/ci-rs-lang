@@ -58,61 +58,50 @@ impl Environment {
 
     pub fn get(&self, name: &str, index: usize) -> Result<Literal, String> {
         let distance = self.locals.borrow().get(&index).cloned();
-        match self.get_internal(name, distance) {
+        match self.get_at_distance(name, distance) {
             Some(literal) => Ok(literal),
             None => Err(format!("Got Undefined variable {}", name))
         }
     }
 
-    fn get_internal(&self, name: &str, distance: Option<usize>) -> Option<Literal> {
-        if let None = distance {
-            match &self.enclosing {
-                None => self.values.borrow().get(name).cloned(),
-                Some(env) => env.get_internal(name, distance),
+    fn get_at_distance(&self, name: &str, distance: Option<usize>) -> Option<Literal> {
+        if let Some(distance) = distance {
+            match distance {
+                0 => self.values.borrow().get(name).cloned(),
+                _ => self.enclosing.as_ref().expect("Should always be within max depth").get_at_distance(name, Some(distance - 1)),
             }
         } else {
-            let distance = distance.unwrap();
-            if distance == 0 {
-                self.values.borrow().get(name).cloned()
-            } else {
-                match &self.enclosing {
-                    None => panic!("Tried to resolve a variable that was defined deeper than the current environment depth"),
-                    Some(env) => {
-                        assert!(distance > 0);
-                        env.get_internal(name, Some(distance - 1))
-                    }
-                }
+            match &self.enclosing {
+                None => self.values.borrow().get(name).cloned(),
+                Some(env) => env.get_at_distance(name, distance)
             }
         }
     }
 
     pub fn assign(&self, name: &str, value: Literal, index: usize) -> Result<(), String> {
         let distance = self.locals.borrow().get(&index).cloned();
-        self.assign_internal(name, value, distance)
+        self.assign_at_distance(name, value, distance)
     }
 
-    fn assign_internal(&self, name: &str, value: Literal, distance: Option<usize>) -> Result<(), String> {
-        if let None = distance {
+    fn assign_at_distance(&self, name: &str, value: Literal, distance: Option<usize>) -> Result<(), String> {
+        if let Some(distance) = distance {
+            match distance {
+                0 => {
+                    self.values.borrow_mut().insert(name.to_string(), value);
+                    return Ok(())
+                },
+                _ => self.enclosing.as_ref().expect("Should always be within max depth").assign_at_distance(name, value, Some(distance - 1))?
+            };
+        } else {
             match &self.enclosing {
-                Some(env) => env.assign_internal(name, value, distance),
-                None => match self.values.borrow_mut().insert(name.to_string(), value) {
+                Some(env) => env.assign_at_distance(name, value, distance)?,
+                None => match self.values.borrow_mut().insert(name.to_string(), value){
                     Some(_) => return Ok(()),
-                    None => return Err(format!("Assigned Undefined variable {}", name)),
+                    None => return Err(format!("Undefined Variable {name}")),
                 },
             }
-        } else {
-            let distance = distance.unwrap();
-            if distance == 0 {
-                self.values.borrow_mut().insert(name.to_string(), value);
-                Ok(())
-            } else {
-                match &self.enclosing {
-                    
-                    None => panic!("Tried to define a variable in a too deep level"),
-                    Some(env) => env.assign_internal(name, value, Some(distance - 1))?,
-                };
-                Ok(())
-            }
         }
+
+        Ok(())
     }
 }
