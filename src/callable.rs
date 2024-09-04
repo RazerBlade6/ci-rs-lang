@@ -8,7 +8,7 @@ pub enum Callables {
         params: Vec<Token>,
         arity: usize,
         body: Vec<Stmt>,
-        environment: Box<Environment>,
+        environment: Environment,
     },
     NativeFunction {
         name: Token,

@@ -108,6 +108,7 @@ pub enum Expr {
     Assignment {
         name: Token,
         value: Box<Expr>,
+        index: usize,
     },
 }
 
@@ -136,7 +137,7 @@ impl Expr {
                 format!("{}{}", operator.lexeme, (*right).to_string())
             }
             Expr::Variable { index: _, name } => name.lexeme.to_string(),
-            Expr::Assignment { name, value } => {
+            Expr::Assignment { name, value, index: _ } => {
                 format!("{} = {}", name.lexeme, (*value).to_string())
             }
             Expr::Logical {
@@ -198,10 +199,11 @@ impl Expr {
         Self::Variable { index, name }
     }
 
-    pub fn create_assigment(name: Token, value: Expr) -> Self {
+    pub fn create_assigment(name: Token, value: Expr, index: usize) -> Self {
         Self::Assignment {
             name,
             value: Box::from(value),
+            index
         }
     }
 
@@ -213,7 +215,7 @@ impl Expr {
         }
     }
 
-    pub fn evaluate(&self, environment: Box<Environment>) -> Result<Literal, String> {
+    pub fn evaluate(&self, environment: Environment) -> Result<Literal, String> {
         match &self {
             Expr::Literal { literal } => Ok((*literal).clone()),
 
@@ -229,7 +231,7 @@ impl Expr {
 
             Expr::Variable { name, index } => environment.get(&name.lexeme, *index),
 
-            Expr::Assignment { name, value } => Self::evaluate_assignment(environment, name, value, self.get_index()),
+            Expr::Assignment { name, value, index } => Self::evaluate_assignment(environment, name, value, *index),
 
             Expr::Logical {
                 left,
@@ -246,7 +248,7 @@ impl Expr {
     }
 
     fn evaluate_unary(
-        environment: Box<Environment>,
+        environment: Environment,
         operator: &Token,
         right: &Box<Expr>,
     ) -> Result<Literal, String> {
@@ -266,7 +268,7 @@ impl Expr {
     }
 
     fn evaluate_binary(
-        environment: Box<Environment>,
+        environment: Environment,
         left: &Box<Expr>,
         operator: &Token,
         right: &Box<Expr>,
@@ -308,13 +310,13 @@ impl Expr {
         }
     }
 
-    fn evaluate_assignment(environment: Box<Environment>, name: &Token, value: &Expr, index: usize) -> Result<Literal, String> {
+    fn evaluate_assignment(environment: Environment, name: &Token, value: &Expr, index: usize) -> Result<Literal, String> {
         let value = (*value).evaluate(environment.clone())?;
         environment.assign(&name.lexeme, value.clone(), index)?;
         Ok(value)
     }
     
-    fn evaluate_logical(environment: Box<Environment>, left: &Expr, operator: &Token, right: &Expr) -> Result<Literal, String> {
+    fn evaluate_logical(environment: Environment, left: &Expr, operator: &Token, right: &Expr) -> Result<Literal, String> {
         let left: Literal = left.evaluate(environment.clone())?;
         if operator.token_type == TokenType::Or {
             if left.is_truthy() {
@@ -329,7 +331,7 @@ impl Expr {
         return right.evaluate(environment);
     }
 
-    fn evaluate_call(environment: Box<Environment>, callee: &Expr, _paren: &Token, args: &[Expr]) -> Result<Literal, String> {
+    fn evaluate_call(environment: Environment, callee: &Expr, _paren: &Token, args: &[Expr]) -> Result<Literal, String> {
         let callee = (*callee).evaluate(environment.clone())?;
      
         let mut arguments = vec![];
@@ -346,7 +348,7 @@ impl Expr {
         }
     }
     
-    fn call_function(name: Token, params: Vec<Token>, arity: usize, body: Vec<Stmt>, environment: Box<Environment>, arguments: Vec<Literal>) -> Result<Literal, String> {
+    fn call_function(name: Token, params: Vec<Token>, arity: usize, body: Vec<Stmt>, environment: Environment, arguments: Vec<Literal>) -> Result<Literal, String> {
         if arguments.len() != arity {
             return Err(format!("Function {} expected {} arguments but got {}", name.lexeme, arity, arguments.len()));
         }
@@ -377,12 +379,5 @@ impl Expr {
             return Err(format!("Native function {} expected {} arguments but got {}", name.lexeme, arity, arguments.len()));
         }
         Ok(fun(arguments)?)
-    }
-    
-    fn get_index(&self) -> usize {
-        match self {
-            Expr::Variable { index, name: _ } => return *index,
-            other => panic!("Tried to get index of expr {:?}", other.to_string())
-        }
     }
 }

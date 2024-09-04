@@ -19,7 +19,7 @@ impl Interpreter {
     }
 
     pub fn new_with_env(environment: Environment) -> Self {
-        Self { environment: environment, ret: None }
+        Self { environment, ret: None }
     }
 
     pub fn resolve(&mut self, locals: HashMap<usize, usize>) {
@@ -39,14 +39,14 @@ impl Interpreter {
     fn execute(&mut self, statement: &Stmt) -> Result<(), String> {
         match statement {
             Stmt::Expression { expr } => {
-                expr.evaluate(Box::new(self.environment.clone()))?;
+                expr.evaluate(self.environment.clone())?;
             }
             Stmt::If {
                 condition,
                 then_branch,
                 else_branch,
             } => {
-                let condition = condition.evaluate(Box::new(self.environment.clone()))?;
+                let condition = condition.evaluate(self.environment.clone())?;
 
                 match (condition.is_truthy(), else_branch) {
                     (true, _) => self.execute(&then_branch)?,
@@ -56,25 +56,24 @@ impl Interpreter {
             }
             
             Stmt::Print { expr } => {
-                let result = expr.evaluate(Box::new(self.environment.clone()))?;
+                let result = expr.evaluate(self.environment.clone())?;
                 println!("{}", result.to_string());
             }
             Stmt::Var { name, initializer } => {
                 let value: Literal = match initializer {
-                    Some(e) => e.evaluate(Box::new(self.environment.clone()))?,
+                    Some(e) => e.evaluate(self.environment.clone())?,
                     None => Literal::Nil
                 };
                    
                 self.environment.define(name.lexeme.to_string(), value)
             }
             Stmt::While { condition, body } => {
-                while condition.evaluate(Box::new(self.environment.clone()))?.is_truthy() {
+                while condition.evaluate(self.environment.clone())?.is_truthy() {
                     self.execute(&body)?;
                 }
             }
             Stmt::Block { statements } => {
-                let mut environment = self.environment.enclose();
-                environment.enclosing = Some(Box::new(self.environment.clone()));
+                let environment = self.environment.enclose();
                 let old_environment = self.environment.clone();
                 self.environment = environment;
                 let result = self.interpret((*statements).iter().map(|b| b).collect());
@@ -87,14 +86,14 @@ impl Interpreter {
                     params: params.clone(), 
                     arity: params.len(), 
                     body: body.clone(),
-                    environment: Box::new(self.environment.clone())
+                    environment: self.environment.clone()
                 };
 
                 self.environment.define(name.lexeme.to_string(), Literal::Callable(value));
             },
             Stmt::Return { value } => {
                 self.ret = match value {
-                    Some(e) => Some(e.evaluate(Box::new(self.environment.clone()))?),
+                    Some(e) => Some(e.evaluate(self.environment.clone())?),
                     None => Some(Literal::Nil)
                 };
             }   

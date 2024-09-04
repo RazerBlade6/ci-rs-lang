@@ -3,12 +3,15 @@ program        → statement* EOF ;
 block          → "{" declaration* "}" ;
 
 declaration    → funDecl
+               | classDecl
                | varDecl
                | statement ;
 
 varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
+classDecl      → "class" IDENTIFIER "{" function* "}" ;
 funDecl        → "fun" function ;
 function       → IDENTIFIER "(" parameters? ")" block ;
+parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
                
 statement      → exprStmt
                | forStmt

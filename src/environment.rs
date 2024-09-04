@@ -60,7 +60,7 @@ impl Environment {
         let distance = self.locals.borrow().get(&index).cloned();
         match self.get_internal(name, distance) {
             Some(literal) => Ok(literal),
-            None => Err(format!("Undefined variable {}", name))
+            None => Err(format!("Got Undefined variable {}", name))
         }
     }
 
@@ -88,29 +88,31 @@ impl Environment {
 
     pub fn assign(&self, name: &str, value: Literal, index: usize) -> Result<(), String> {
         let distance = self.locals.borrow().get(&index).cloned();
-        self.assign_at_distance(name, value, distance)
+        self.assign_internal(name, value, distance)
     }
 
-    fn assign_at_distance(&self, name: &str, value: Literal, distance: Option<usize>) -> Result<(), String> {
-        if let Some(distance) = distance {
-            if distance == 0 {
-                self.values.borrow_mut().insert(name.to_string(), value);
-                return Ok(())
-            } else {
-                match &self.enclosing {
-                    None => panic!("Tried to define a variable deeper than max depth"),
-                    Some(env) => return env.assign_at_distance(name, value, Some(distance - 1))
-                }
-            }
-        } else {
+    fn assign_internal(&self, name: &str, value: Literal, distance: Option<usize>) -> Result<(), String> {
+        if let None = distance {
             match &self.enclosing {
-                Some(env) => env.assign_at_distance(name, value, distance)?,
+                Some(env) => env.assign_internal(name, value, distance),
                 None => match self.values.borrow_mut().insert(name.to_string(), value) {
                     Some(_) => return Ok(()),
-                    None => return Err(format!("Undefined Variable '{}'", name))
-                }
-            };
-            return Ok(())
+                    None => return Err(format!("Assigned Undefined variable {}", name)),
+                },
+            }
+        } else {
+            let distance = distance.unwrap();
+            if distance == 0 {
+                self.values.borrow_mut().insert(name.to_string(), value);
+                Ok(())
+            } else {
+                match &self.enclosing {
+                    
+                    None => panic!("Tried to define a variable in a too deep level"),
+                    Some(env) => env.assign_internal(name, value, Some(distance - 1))?,
+                };
+                Ok(())
+            }
         }
     }
 }
