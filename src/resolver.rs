@@ -168,7 +168,6 @@ impl Resolver {
     fn declare(&mut self, name: &Token) {
         match self.scopes.last_mut() {
             Some(scope) => {
-                println!("Declared: {:?}", name);
                 scope.insert(name.lexeme.clone(), false)
             },
             None => return,
@@ -176,7 +175,6 @@ impl Resolver {
     }
 
     fn define(&mut self, name: &Token) {
-        println!("Defined: {:?}", name);
         match self.scopes.last_mut() {
             Some(scope) => scope.insert(name.lexeme.clone(), true),
             None => return,

@@ -80,7 +80,7 @@ fn run(src: &str, interpreter: &mut Interpreter) -> Result<(), String> {
 
     let mut resolver = Resolver::new();
     resolver.resolve(&statements.iter().map(|s| s).collect())?;
-    dbg!(&resolver.locals);
+    
     interpreter.resolve(resolver.locals);
     interpreter.interpret(statements.iter().collect())?;
     Ok(())
