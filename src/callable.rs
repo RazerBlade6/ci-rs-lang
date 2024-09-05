@@ -71,3 +71,20 @@ impl PartialEq for Callables {
         }
     }
 }
+
+impl Callables {
+    pub fn to_string(&self) -> String {
+        match self {
+            Callables::LoxFunction {
+                name,
+                params: _,
+                arity: _,
+                body: _,
+                environment: _,
+            } => {
+                format!("<function> {}", name.lexeme)
+            },
+            Callables::NativeFunction { name: _, arity: _, fun: _ } => todo!(),
+        }
+    }
+}

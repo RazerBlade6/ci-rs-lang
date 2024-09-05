@@ -4,12 +4,16 @@ use crate::{expr::*, Token, TokenType};
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
-    index: usize
+    index: usize,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, current: 0, index: 0 }
+        Self {
+            tokens,
+            current: 0,
+            index: 0,
+        }
     }
 
     pub fn parse(&mut self) -> Result<Vec<Stmt>, String> {
@@ -52,13 +56,19 @@ impl Parser {
 
     fn function(&mut self, kind: &str) -> Result<Stmt, String> {
         let name = self.consume(TokenType::Identifier, &format!("Expected {kind} name"))?;
-        self.consume(TokenType::LeftParen, &format!("Expected '(' after {kind} name"))?;
+        self.consume(
+            TokenType::LeftParen,
+            &format!("Expected '(' after {kind} name"),
+        )?;
 
         let mut params = vec![];
         if !self.check(&TokenType::RightParen) {
             loop {
                 if params.len() >= 255 {
-                    return Err(format!("Line {}: Cant have more than 255 arguments", self.peek().line));
+                    return Err(format!(
+                        "Line {}: Cant have more than 255 arguments",
+                        self.peek().line
+                    ));
                 }
                 params.push(self.consume(TokenType::Identifier, "Expected parameter name")?);
                 if !self.match_tokens(&[TokenType::Comma]) {
@@ -67,13 +77,16 @@ impl Parser {
             }
         }
         self.consume(TokenType::RightParen, "Expected ')' after parameters.")?;
-        self.consume(TokenType::LeftBrace, &format!("Expected '{{' before {kind} body."))?;
+        self.consume(
+            TokenType::LeftBrace,
+            &format!("Expected '{{' before {kind} body."),
+        )?;
 
         let body = match self.block()? {
             Stmt::Block { statements } => statements,
             _ => panic!("Block statement parsed something that was not a block"),
         };
-        
+
         Ok(Stmt::Function { name, params, body })
     }
 
@@ -85,8 +98,12 @@ impl Parser {
         } else {
             initializer = None;
         }
-
-        self.consume(TokenType::SemiColon, "Expected ';' after variable declaration",)?;
+        if self.peek().token_type == TokenType::SemiColon {
+            self.consume(
+                TokenType::SemiColon,
+                "Expected ';' after variable declaration",
+            )?;
+        }
         Ok(Stmt::Var { name, initializer })
     }
 
@@ -96,9 +113,6 @@ impl Parser {
         }
         if self.match_tokens(&[TokenType::If]) {
             return self.if_statement();
-        }
-        if self.match_tokens(&[TokenType::Print]) {
-            return self.print_statement();
         }
         if self.match_tokens(&[TokenType::Return]) {
             return self.return_statement();
@@ -199,16 +213,12 @@ impl Parser {
     fn return_statement(&mut self) -> Result<Stmt, String> {
         let value = match self.check(&TokenType::SemiColon) {
             true => None,
-            false => Some(self.expression()?)
+            false => Some(self.expression()?),
         };
-        self.consume(TokenType::SemiColon, "Expected ';' after return value")?;
+        if self.peek().token_type == TokenType::SemiColon {
+            self.consume(TokenType::SemiColon, "Expected ';' after return value")?;
+        }
         Ok(Stmt::Return { value })
-    }
-
-    fn print_statement(&mut self) -> Result<Stmt, String> {
-        let expr: Expr = self.expression()?;
-        self.consume(TokenType::SemiColon, "Expected ';' after value")?;
-        Ok(Stmt::Print { expr })
     }
 
     fn block(&mut self) -> Result<Stmt, String> {
@@ -223,7 +233,9 @@ impl Parser {
 
     fn expr_statement(&mut self) -> Result<Stmt, String> {
         let expr = self.expression()?;
-        self.consume(TokenType::SemiColon, "Expected ';' after expression")?;
+        if self.peek().token_type == TokenType::SemiColon {
+            self.consume(TokenType::SemiColon, "Expected ';' after expression")?;
+        }
         Ok(Stmt::Expression { expr })
     }
 
@@ -252,7 +264,7 @@ impl Parser {
         if self.match_tokens(&[TokenType::Or]) {
             let operator: Token = self.previous();
             let right: Expr = self.and()?;
-            expr = Expr::create_logical(expr, operator, right)
+            expr = Expr::new_logical(expr, operator, right)
         }
         return Ok(expr);
     }
@@ -263,7 +275,7 @@ impl Parser {
         if self.match_tokens(&[TokenType::And]) {
             let operator: Token = self.previous();
             let right: Expr = self.equality()?;
-            expr = Expr::create_logical(expr, operator, right);
+            expr = Expr::new_logical(expr, operator, right);
         }
         return Ok(expr);
     }
@@ -274,7 +286,7 @@ impl Parser {
         while self.match_tokens(&[TokenType::BangEqual, TokenType::EqualEqual]) {
             let operator = self.previous();
             let right = self.comparison()?;
-            expr = Expr::create_binary(expr, operator, right);
+            expr = Expr::new_binary(expr, operator, right);
         }
 
         return Ok(expr);
@@ -290,7 +302,7 @@ impl Parser {
         ]) {
             let operator = self.previous();
             let right = self.term()?;
-            expr = Expr::create_binary(expr, operator, right);
+            expr = Expr::new_binary(expr, operator, right);
         }
 
         Ok(expr)
@@ -302,7 +314,7 @@ impl Parser {
         while self.match_tokens(&[TokenType::Minus, TokenType::Plus]) {
             let operator = self.previous();
             let right = self.factor()?;
-            expr = Expr::create_binary(expr, operator, right);
+            expr = Expr::new_binary(expr, operator, right);
         }
 
         Ok(expr)
@@ -314,7 +326,7 @@ impl Parser {
         while self.match_tokens(&[TokenType::Slash, TokenType::Star, TokenType::Percent]) {
             let operator = self.previous();
             let right = self.factor()?;
-            expr = Expr::create_binary(expr, operator, right);
+            expr = Expr::new_binary(expr, operator, right);
         }
 
         Ok(expr)
@@ -340,6 +352,8 @@ impl Parser {
                 break;
             }
         }
+
+
         Ok(expr)
     }
 
@@ -371,7 +385,7 @@ impl Parser {
                 self.advance();
                 let expr = self.expression()?;
                 self.consume(TokenType::RightParen, "Expected `)`")?;
-                return Ok(Expr::create_grouping(expr));
+                return Ok(Expr::new_grouping(expr));
             }
             TokenType::False
             | TokenType::True
@@ -379,7 +393,7 @@ impl Parser {
             | TokenType::Number
             | TokenType::String => {
                 self.advance();
-                return Ok(Expr::create_literal(Literal::from_token(token)));
+                return Ok(Expr::new_literal(Literal::from_token(token)));
             }
             TokenType::Identifier => {
                 self.advance();
@@ -416,7 +430,7 @@ impl Parser {
                 | TokenType::For
                 | TokenType::If
                 | TokenType::While
-                | TokenType::Print
+                // | TokenType::Print
                 | TokenType::Return => return,
                 _ => (),
             }

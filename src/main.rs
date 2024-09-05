@@ -1,16 +1,17 @@
+mod callable;
 mod environment;
 mod expr;
 mod interpreter;
 mod native;
 mod parser;
-mod scanner;
 mod resolver;
+mod scanner;
 mod stmt;
 mod token;
-mod callable;
 
 use interpreter::Interpreter;
 use parser::*;
+use resolver::Resolver;
 use scanner::Scanner;
 use std::{
     env, fs,
@@ -19,7 +20,6 @@ use std::{
 };
 use stmt::Stmt;
 use token::*;
-use resolver::Resolver;
 // use expr::{Expr, LitValue};
 
 fn run_prompt() -> Result<(), String> {
@@ -80,7 +80,7 @@ fn run(src: &str, interpreter: &mut Interpreter) -> Result<(), String> {
 
     let mut resolver = Resolver::new();
     resolver.resolve(&statements.iter().map(|s| s).collect())?;
-    
+
     interpreter.resolve(resolver.locals);
     interpreter.interpret(statements.iter().collect())?;
     Ok(())

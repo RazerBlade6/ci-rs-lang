@@ -1,11 +1,1 @@
-var a = "global";
-{
-    fun showA() {
-        print a;
-    }
-
-    showA();
-
-    var a = "block";
-    showA(); 
-}
+[1, 2, 3]

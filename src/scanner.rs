@@ -44,7 +44,7 @@ lazy_static! {
             ("if", TokenType::If),
             ("nil", TokenType::Nil),
             ("or", TokenType::Or),
-            ("print", TokenType::Print),
+            // ("print", TokenType::Print),
             ("return", TokenType::Return),
             ("super", TokenType::Super),
             ("this", TokenType::This),
@@ -175,25 +175,30 @@ impl Scanner {
         self.add_token(token_type);
     }
 
-    fn add_token(&mut self, token_type: TokenType, ) {
+    fn add_token(&mut self, token_type: TokenType) {
         let text = &self.src[self.start..self.current];
-        let token = Token::new(token_type, text,  self.line);
+        let token = Token::new(token_type, text, self.line);
         self.tokens.push(token);
     }
 
     fn add_token_s(&mut self, token_type: TokenType, text: &str) {
-        self.tokens
-            .push(Token::new(token_type, text, self.line))
+        self.tokens.push(Token::new(token_type, text, self.line))
     }
 
     fn number(&mut self) {
         while self.peek(0).is_ascii_digit() {
+            if self.peek(0) == '_' {
+                continue;
+            }
             self.advance();
         }
 
         if self.peek(0) == '.' && self.peek(1).is_ascii_digit() {
             self.advance();
             while self.peek(0).is_ascii_digit() {
+                if self.peek(0) == '_' {
+                    continue;
+                }
                 self.advance();
             }
         }

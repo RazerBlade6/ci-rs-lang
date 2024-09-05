@@ -11,9 +11,9 @@ pub enum Literal {
     Str(String),
     Boolean(bool),
     Nil,
-    Callable(Callables)
+    Callable(Callables),
 }
-use {Literal::*, Callables::*};
+use {Callables::*, Literal::*};
 
 impl Literal {
     pub fn to_string(&self) -> String {
@@ -22,7 +22,7 @@ impl Literal {
             Str(s) => return s.to_string(),
             Boolean(b) => return format!("{b}"),
             Nil => return String::from("nil"),
-            Self::Callable(_) => String::from("Callable")
+            Self::Callable(other) => other.to_string(),
         }
     }
 
@@ -32,8 +32,18 @@ impl Literal {
             Str(_) => return "String",
             Boolean(_) => return "Boolean",
             Nil => return "nil",
-            Callable(LoxFunction { name: _, params: _, arity: _, body: _, environment: _ }) => return "<function>",
-            Callable(NativeFunction { name: _, arity: _, fun: _ }) => return "<native function>"
+            Callable(LoxFunction {
+                name: _,
+                params: _,
+                arity: _,
+                body: _,
+                environment: _,
+            }) => return "<function>",
+            Callable(NativeFunction {
+                name: _,
+                arity: _,
+                fun: _,
+            }) => return "<native function>",
         }
     }
 
@@ -48,7 +58,10 @@ impl Literal {
             TokenType::True => Self::Boolean(true),
             TokenType::False => Self::Boolean(false),
             TokenType::Nil => Nil,
-            other => panic!("Invalid Syntax: Attempted extracting literal alue from non-valued type {}", other.to_string())
+            other => panic!(
+                "Invalid Syntax: Attempted extracting literal alue from non-valued type {}",
+                other.to_string()
+            ),
         }
     }
 
@@ -58,7 +71,7 @@ impl Literal {
             Str(s) => Boolean(s.len() == 0),
             Boolean(b) => Boolean(*b),
             Nil => Boolean(true),
-            Callable(_) => panic!("Invalid Syntax: attempted to check falsy-ness of Callable"),
+            Callable(_) => Boolean(false),
         }
     }
 
@@ -68,7 +81,7 @@ impl Literal {
             Str(s) => return s.len() != 0,
             Boolean(b) => return *b,
             Nil => return false,
-            Callable(_) => panic!("Invalid Syntax: attempted to check truthy-ness of Callable"),
+            Callable(_) => return true,
         }
     }
 }
@@ -136,7 +149,11 @@ impl Expr {
                 format!("{}{}", operator.lexeme, (*right).to_string())
             }
             Expr::Variable { index: _, name } => name.lexeme.to_string(),
-            Expr::Assignment { name, value, index: _ } => {
+            Expr::Assignment {
+                name,
+                value,
+                index: _,
+            } => {
                 format!("{} = {}", name.lexeme, (*value).to_string())
             }
             Expr::Logical {
@@ -154,14 +171,14 @@ impl Expr {
             Expr::Call {
                 callee: _,
                 paren,
-                args: _
+                args: _,
             } => {
                 format!("function {}()", paren.lexeme)
             }
         }
     }
 
-    pub fn create_binary(left: Expr, operator: Token, right: Expr) -> Self {
+    pub fn new_binary(left: Expr, operator: Token, right: Expr) -> Self {
         Self::Binary {
             left: Box::from(left),
             operator,
@@ -169,17 +186,17 @@ impl Expr {
         }
     }
 
-    pub fn create_grouping(expr: Expr) -> Self {
+    pub fn new_grouping(expr: Expr) -> Self {
         Self::Grouping {
             expr: Box::from(expr),
         }
     }
 
-    pub fn create_literal(literal: Literal) -> Self {
+    pub fn new_literal(literal: Literal) -> Self {
         Self::Literal { literal }
     }
 
-    pub fn create_logical(left: Expr, operator: Token, right: Expr) -> Self {
+    pub fn new_logical(left: Expr, operator: Token, right: Expr) -> Self {
         Self::Logical {
             left: Box::from(left),
             operator,
@@ -202,7 +219,7 @@ impl Expr {
         Self::Assignment {
             name,
             value: Box::from(value),
-            index
+            index,
         }
     }
 
@@ -230,7 +247,9 @@ impl Expr {
 
             Expr::Variable { name, index } => environment.get(&name.lexeme, *index),
 
-            Expr::Assignment { name, value, index } => Self::evaluate_assignment(environment, name, value, *index),
+            Expr::Assignment { name, value, index } => {
+                Self::evaluate_assignment(environment, name, value, *index)
+            }
 
             Expr::Logical {
                 left,
@@ -256,10 +275,7 @@ impl Expr {
         match (operator.token_type, &right) {
             (TokenType::Minus, Number(x)) => return Ok(Number(-x)),
             (TokenType::Minus, _) => {
-                return Err(format!(
-                    "negation not implemented for {}",
-                    right.to_type()
-                ))
+                return Err(format!("negation not implemented for {}", right.to_type()))
             }
             (TokenType::Bang, any) => Ok(any.is_falsy()),
             _ => panic!("Invalid syntax: Parser specified non-unary expression as unary!"),
@@ -300,6 +316,10 @@ impl Expr {
 
             (x, TokenType::BangEqual, y) => Ok(Boolean(x != y)),
 
+            (Str(s), TokenType::Plus, other) => Ok(Str(s.to_owned() + &other.to_string())),
+
+            (some, TokenType::Plus, Str(s)) => Ok(Str(some.to_string() + s)),
+            
             _ => Err(format!(
                 "{} not implemented between {} and {}",
                 operator.lexeme,
@@ -309,13 +329,23 @@ impl Expr {
         }
     }
 
-    fn evaluate_assignment(environment: Environment, name: &Token, value: &Expr, index: usize) -> Result<Literal, String> {
+    fn evaluate_assignment(
+        environment: Environment,
+        name: &Token,
+        value: &Expr,
+        index: usize,
+    ) -> Result<Literal, String> {
         let value = (*value).evaluate(environment.clone())?;
         environment.assign(&name.lexeme, value.clone(), index)?;
         Ok(value)
     }
-    
-    fn evaluate_logical(environment: Environment, left: &Expr, operator: &Token, right: &Expr) -> Result<Literal, String> {
+
+    fn evaluate_logical(
+        environment: Environment,
+        left: &Expr,
+        operator: &Token,
+        right: &Expr,
+    ) -> Result<Literal, String> {
         let left: Literal = left.evaluate(environment.clone())?;
         if operator.token_type == TokenType::Or {
             if left.is_truthy() {
@@ -330,9 +360,14 @@ impl Expr {
         return right.evaluate(environment);
     }
 
-    fn evaluate_call(environment: Environment, callee: &Expr, _paren: &Token, args: &[Expr]) -> Result<Literal, String> {
+    fn evaluate_call(
+        environment: Environment,
+        callee: &Expr,
+        _paren: &Token,
+        args: &[Expr],
+    ) -> Result<Literal, String> {
         let callee = (*callee).evaluate(environment.clone())?;
-     
+
         let mut arguments = vec![];
         for arg in args {
             arguments.push(arg.evaluate(environment.clone())?);
@@ -340,25 +375,45 @@ impl Expr {
 
         match callee {
             Callable(callable) => match callable {
-                LoxFunction { name, params, arity, body, environment } => return Self::call_function(name, params, arity, body, environment, arguments),
-                NativeFunction { name, arity, fun } => return Self::call_native(name, arity, fun, arguments),
+                LoxFunction {
+                    name,
+                    params,
+                    arity,
+                    body,
+                    environment,
+                } => return Self::call_function(name, params, arity, body, environment, arguments),
+                NativeFunction { name, arity, fun } => {
+                    return Self::call_native(name, arity, fun, arguments)
+                }
             },
-            other => return Err(format!("Could not call {}", other.to_type())) 
+            other => return Err(format!("Could not call {}", other.to_type())),
         }
     }
-    
-    fn call_function(name: Token, params: Vec<Token>, arity: usize, body: Vec<Stmt>, environment: Environment, arguments: Vec<Literal>) -> Result<Literal, String> {
+
+    fn call_function(
+        name: Token,
+        params: Vec<Token>,
+        arity: usize,
+        body: Vec<Stmt>,
+        environment: Environment,
+        arguments: Vec<Literal>,
+    ) -> Result<Literal, String> {
         if arguments.len() != arity {
-            return Err(format!("Function {} expected {} arguments but got {}", name.lexeme, arity, arguments.len()));
+            return Err(format!(
+                "Function {} expected {} arguments but got {}",
+                name.lexeme,
+                arity,
+                arguments.len()
+            ));
         }
 
-        let mut env = environment.enclose();
+        let mut environment = environment.enclose();
 
         for (index, value) in arguments.iter().enumerate() {
-            env.define(params[index].lexeme.clone(), value.clone());
+            environment.define(params[index].lexeme.clone(), value.clone());
         }
-        
-        let mut interpreter = Interpreter::new_with_env(env);
+
+        let mut interpreter = Interpreter::new_with_env(environment);
 
         for statement in &body {
             let result = interpreter.interpret(vec![statement]);
@@ -368,14 +423,23 @@ impl Expr {
             if let Some(ret) = interpreter.ret.clone() {
                 return Ok(ret);
             }
-
         }
         Ok(Literal::Nil)
     }
-    
-    fn call_native(name: Token, arity: usize, fun: Rc<dyn Fn(Vec<Literal>) -> Result<Literal, String>>, arguments: Vec<Literal>) -> Result<Literal, String> {
+
+    fn call_native(
+        name: Token,
+        arity: usize,
+        fun: Rc<dyn Fn(Vec<Literal>) -> Result<Literal, String>>,
+        arguments: Vec<Literal>,
+    ) -> Result<Literal, String> {
         if arguments.len() != arity {
-            return Err(format!("Native function {} expected {} arguments but got {}", name.lexeme, arity, arguments.len()));
+            return Err(format!(
+                "Native function {} expected {} arguments but got {}",
+                name.lexeme,
+                arity,
+                arguments.len()
+            ));
         }
         Ok(fun(arguments)?)
     }

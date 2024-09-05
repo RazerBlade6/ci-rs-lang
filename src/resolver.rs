@@ -25,7 +25,6 @@ impl Resolver {
     pub fn resolve(&mut self, statements: &Vec<&Stmt>) -> Result<(), String> {
         for statement in statements {
             self.resolve_statement(statement)?;
-
         }
         Ok(())
     }
@@ -46,12 +45,12 @@ impl Resolver {
                     self.resolve_statement(s)?;
                 }
             }
-            Stmt::Print { expr } => {
-                self.resolve_expr(expr)?;
-            }
+            // Stmt::Print { expr } => {
+            //     self.resolve_expr(expr)?;
+            // }
             Stmt::Return { value } => {
                 if let None = self.function_type {
-                    return Err(format!("Can't return from global scope"))
+                    return Err(format!("Can't return from global scope"));
                 } else if let Some(v) = value {
                     self.resolve_expr(v)?;
                 }
@@ -72,11 +71,7 @@ impl Resolver {
                 self.resolve(&statements.iter().map(|s| s).collect())?;
                 self.end_scope();
             }
-            Stmt::Function {
-                name,
-                params,
-                body,
-            } => {
+            Stmt::Function { name, params, body } => {
                 let parent_function = self.function_type.clone();
                 self.function_type = Some(FunctionType::Function);
                 self.declare(name);
@@ -133,7 +128,10 @@ impl Resolver {
             Expr::Variable { name, index } => {
                 if let Some(last) = self.scopes.last() {
                     if Some(&false) == last.get(&name.lexeme) {
-                        return Err(format!("Tried to read local variable {} in own initialization", name.lexeme))
+                        return Err(format!(
+                            "Tried to read local variable {} in own initialization",
+                            name.lexeme
+                        ));
                     }
                 }
                 self.resolve_local(name, *index);
@@ -167,9 +165,7 @@ impl Resolver {
 
     fn declare(&mut self, name: &Token) {
         match self.scopes.last_mut() {
-            Some(scope) => {
-                scope.insert(name.lexeme.clone(), false)
-            },
+            Some(scope) => scope.insert(name.lexeme.clone(), false),
             None => return,
         };
     }

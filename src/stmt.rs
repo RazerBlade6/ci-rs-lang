@@ -11,11 +11,11 @@ pub enum Stmt {
         then_branch: Box<Stmt>,
         else_branch: Option<Box<Stmt>>,
     },
-    Print {
-        expr: Expr,
-    },
+    // Print {
+    //     expr: Expr,
+    // },
     Return {
-        value: Option<Expr>
+        value: Option<Expr>,
     },
     Var {
         name: Token,
@@ -42,7 +42,7 @@ impl Stmt {
 
         match self {
             Expression { expr } => expr.to_string(),
-            Print { expr } => format!("(print {})", expr.to_string()),
+            // Print { expr } => format!("(print {})", expr.to_string()),
             Var { name, .. } => format!(
                 "Variable: {} ({})",
                 name.lexeme,
@@ -79,12 +79,15 @@ impl Stmt {
                 params,
                 body: _,
             } => {
-                format!("<function> {}/{}", name.lexeme, params.len())
-            },
-            Return { value } => format!("returning {}", match value {
-                Some(e) => e.to_string(),
-                None => "".to_string()
-            })
+                format!("<function> {}({})", name.lexeme, params.len())
+            }
+            Return { value } => format!(
+                "returning {}",
+                match value {
+                    Some(e) => e.to_string(),
+                    None => "".to_string(),
+                }
+            ),
         }
     }
 }

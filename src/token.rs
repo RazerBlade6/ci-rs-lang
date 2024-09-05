@@ -19,9 +19,6 @@
 //! }
 //! ```
 //!
-//! Further, in the translation from Java to Rust, the `Literal` enum, which holds
-//! values for various Tokens.
-//!
 
 #[derive(Clone, PartialEq, Debug, Copy)]
 pub enum TokenType {
@@ -65,7 +62,7 @@ pub enum TokenType {
     If,
     Nil,
     Or,
-    Print,
+    // Print,
     Return,
     Super,
     This,
@@ -113,7 +110,6 @@ impl TokenType {
             TokenType::If => return "If",
             TokenType::Nil => return "Nil",
             TokenType::Or => return "Or",
-            TokenType::Print => return "Print",
             TokenType::Return => return "Return",
             TokenType::Super => return "Super",
             TokenType::This => return "This",

@@ -1,25 +1,28 @@
 use std::collections::HashMap;
 
+use crate::callable::Callables;
 use crate::environment::Environment;
 use crate::expr::Literal;
 use crate::stmt::Stmt;
-use crate::callable::Callables;
 
 pub struct Interpreter {
     pub environment: Environment,
-    pub ret: Option<Literal>
+    pub ret: Option<Literal>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Self {
             environment: Environment::new(HashMap::new()),
-            ret: None
+            ret: None,
         }
     }
 
     pub fn new_with_env(environment: Environment) -> Self {
-        Self { environment, ret: None }
+        Self {
+            environment,
+            ret: None,
+        }
     }
 
     pub fn resolve(&mut self, locals: HashMap<usize, usize>) {
@@ -54,17 +57,16 @@ impl Interpreter {
                     (false, None) => return Ok(()),
                 }
             }
-            
-            Stmt::Print { expr } => {
-                let result = expr.evaluate(self.environment.clone())?;
-                println!("{}", result.to_string());
-            }
+            // Stmt::Print { expr } => {
+            //     let result = expr.evaluate(self.environment.clone())?;
+            //     println!("{}", result.to_string());
+            // }
             Stmt::Var { name, initializer } => {
                 let value: Literal = match initializer {
                     Some(e) => e.evaluate(self.environment.clone())?,
-                    None => Literal::Nil
+                    None => Literal::Nil,
                 };
-                   
+
                 self.environment.define(name.lexeme.to_string(), value)
             }
             Stmt::While { condition, body } => {
@@ -81,22 +83,23 @@ impl Interpreter {
                 result?
             }
             Stmt::Function { name, params, body } => {
-                let value = Callables::LoxFunction { 
-                    name: name.clone(), 
-                    params: params.clone(), 
-                    arity: params.len(), 
+                let value = Callables::LoxFunction {
+                    name: name.clone(),
+                    params: params.clone(),
+                    arity: params.len(),
                     body: body.clone(),
-                    environment: self.environment.clone()
+                    environment: self.environment.clone(),
                 };
 
-                self.environment.define(name.lexeme.to_string(), Literal::Callable(value));
-            },
+                self.environment
+                    .define(name.lexeme.to_string(), Literal::Callable(value));
+            }
             Stmt::Return { value } => {
                 self.ret = match value {
                     Some(e) => Some(e.evaluate(self.environment.clone())?),
-                    None => Some(Literal::Nil)
+                    None => Some(Literal::Nil),
                 };
-            }   
+            }
         };
 
         Ok(())
