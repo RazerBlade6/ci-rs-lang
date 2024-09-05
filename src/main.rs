@@ -51,7 +51,7 @@ fn run_prompt() -> Result<(), String> {
         if &buffer == "\n" || &buffer == "\r\n" {
             println!("");
             continue;
-        } 
+        }
 
         match run(buffer.trim(), &mut interpreter) {
             Ok(_) => (),

@@ -1,4 +1,5 @@
-use crate::{callable::Callables, expr::Literal, native::*, Token, TokenType};
+use crate::expr::Literal;
+use crate::native::globals;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 #[derive(Debug, Clone)]
@@ -11,33 +12,10 @@ pub struct Environment {
 impl Environment {
     pub fn new(locals: HashMap<usize, usize>) -> Self {
         Self {
-            values: Rc::from(RefCell::from(Self::globals())),
+            values: Rc::from(RefCell::from(globals())),
             locals: Rc::from(RefCell::from(locals)),
             enclosing: None,
         }
-    }
-
-    fn globals() -> HashMap<String, Literal> {
-        let mut globals = HashMap::new();
-        let name = Token::new(TokenType::Fun, "clock",  0);
-        globals.insert(
-            "clock".to_string(),
-            Literal::Callable(Callables::NativeFunction {
-                name,
-                arity: 0,
-                fun: Rc::from(clock),
-            })
-        );
-        globals.insert(
-            "clear".to_string(),
-            Literal::Callable( Callables::NativeFunction {
-                name: Token::new(TokenType::Fun, "clear", 0),
-                arity: 0,
-                fun: Rc::from(clear),
-            }),
-        );
-
-        globals
     }
 
     pub fn resolve(&mut self, index: usize, distance: usize) {
@@ -94,11 +72,11 @@ impl Environment {
             };
         } else {
             match &self.enclosing {
-                Some(env) => env.assign_at_distance(name, value, distance)?,
                 None => match self.values.borrow_mut().insert(name.to_string(), value){
                     Some(_) => return Ok(()),
                     None => return Err(format!("Undefined Variable {name}")),
                 },
+                Some(env) => env.assign_at_distance(name, value, distance)?,
             }
         }
 

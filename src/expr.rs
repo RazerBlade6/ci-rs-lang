@@ -26,7 +26,7 @@ impl Literal {
         }
     }
 
-    fn to_type(&self) -> &str {
+    pub fn to_type(&self) -> &str {
         match self {
             Number(_) => return "Number",
             Str(_) => return "String",
