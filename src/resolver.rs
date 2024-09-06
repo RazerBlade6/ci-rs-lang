@@ -45,9 +45,6 @@ impl Resolver {
                     self.resolve_statement(s)?;
                 }
             }
-            // Stmt::Print { expr } => {
-            //     self.resolve_expr(expr)?;
-            // }
             Stmt::Return { value } => {
                 if let None = self.function_type {
                     return Err(format!("Can't return from global scope"));

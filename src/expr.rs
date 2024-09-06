@@ -319,7 +319,7 @@ impl Expr {
             (Str(s), TokenType::Plus, other) => Ok(Str(s.to_owned() + &other.to_string())),
 
             (some, TokenType::Plus, Str(s)) => Ok(Str(some.to_string() + s)),
-            
+
             _ => Err(format!(
                 "{} not implemented between {} and {}",
                 operator.lexeme,

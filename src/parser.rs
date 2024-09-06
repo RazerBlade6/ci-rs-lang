@@ -1,5 +1,31 @@
-use crate::stmt::Stmt;
-use crate::{expr::*, Token, TokenType};
+//! # Recursive Descent Parser
+//! 
+//! A recursive-descent parser generates an Abstract Syntax Tree by recursively calling 
+//! helper functions that are arranged to encode the formal syntax of a language
+//! 
+//! The public API of this module consists of `Parser::new()` and `parse(&mut self) -> Result<Vec<Stmt>, String>`
+//! The parser instance does not itself have ownership of the parsed syntax tree, so it can be freely
+//! owned by the caller.
+//! 
+//! To find the exact syntax order and precendence rules, please see `docs/expressions.txt` and `docs/statements.txt`
+//! 
+//! ### Usage
+//! ```
+//! use parser::Parser;
+//! 
+//! fn main() {
+//!     let tokens = vec![] // this would be the tokens as obtained from the Scanner
+//!     let mut parser = Parser::new(tokens)
+//!     let statements = parser.parse()?;
+//! }
+//! ``` 
+
+use crate::{
+    expr::*,
+    stmt::Stmt,
+    token::Token, 
+    token::TokenType,
+};
 
 pub struct Parser {
     tokens: Vec<Token>,

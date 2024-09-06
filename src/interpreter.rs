@@ -1,9 +1,12 @@
-use std::collections::HashMap;
 
-use crate::callable::Callables;
-use crate::environment::Environment;
-use crate::expr::Literal;
-use crate::stmt::Stmt;
+use crate::{
+    callable::Callables,
+    environment::Environment,
+    expr::Literal,
+    stmt::Stmt
+};
+
+use std::collections::HashMap;
 
 pub struct Interpreter {
     pub environment: Environment,

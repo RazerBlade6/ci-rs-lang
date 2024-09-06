@@ -1,24 +1,28 @@
-//! # The container module for the Token Scanner
+//! # Scanner
+//! 
+//! A rudimentary source string Scanner + Lexer. The Scanner impl contains various
+//! utility methods to tokenize the input strings according to Lox's syntax rules.
+//! Any new tokens must be implemented within the method call stack, according to 
+//! its level 
 //!
-//! Holds all functionality for token scanning and lexing.
-//! Though the module is called `scanner`, it is more properly described as a lexer.
+//! The only components of the public API of this module is a constructor `Scanner::new() -> Self` and 
+//! `Scanner::scan_tokens(&mut self)`.
+//! 
+//! ### Limitations
+//! Unfortunately, to maintain overall code integrity (A.K.A my poor design decisions) the Scanner must have tokens
+//! as a field, so it is not possible to move it out of Scanner until runtime termination
 //!
-//! The only exposed components of this module are the
-//! `Scanner::new(src: &str) -> Self` and `Scanner::scan_tokens() -> Vec<Token>`
-//!
-//! Note: This method returns a Vector of Tokens from source strings.
-//! However, it does not itself contain specifications of said tokens.
-//! Those details may be found in `crate::token`
-//!
-//! ## Usage
+//! ### Usage
 //! ```
 //! use scanner::Scanner;
+//! 
 //! fn main() {
 //!     let src: &str = "some_example_str";
 //!     let mut scanner: Scanner = Scanner::new(src);
 //!     let tokens: Vec<Token> = scanner.scan_tokens();
 //! }
 //! ```
+
 use crate::token::*;
 use lazy_static::*;
 use std::collections::HashMap;
@@ -44,7 +48,6 @@ lazy_static! {
             ("if", TokenType::If),
             ("nil", TokenType::Nil),
             ("or", TokenType::Or),
-            // ("print", TokenType::Print),
             ("return", TokenType::Return),
             ("super", TokenType::Super),
             ("this", TokenType::This),

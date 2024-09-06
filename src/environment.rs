@@ -1,5 +1,24 @@
-use crate::expr::Literal;
-use crate::native::globals;
+//! # Lox Environment
+//! 
+//! This module contains the implementation of the Runtime Environment of the Lox Language. 
+//! All variables, global and local, along with function pointers, are stored in this environment
+//! 
+//! In most cases, this module will not be directly invoked, but rather contained within an `Interpreter`.
+//! Environments may have an `enclosing`, an `Option<Box<Environment>>` that represents a pointer to other, 
+//! indirected environments. This is to allow scoping and shadowing of variables, along with preventing
+//! contamination of values between scopes. 
+//! 
+//! New environments are created on the creation of a block, and the calling of a function. It is required
+//! to generate a new environment for a function call to allow for recursive function calls.
+//! 
+//! All methods of this struct are public, though they are not to be called directly, but rather within Expression and
+//! Statement Blocks
+//! 
+
+use crate::{
+    expr::Literal,
+    native::globals
+};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 #[derive(Debug, Clone)]
@@ -38,7 +57,7 @@ impl Environment {
         let distance = self.locals.borrow().get(&index).cloned();
         match self.get_at_distance(name, distance) {
             Some(literal) => Ok(literal),
-            None => Err(format!("Got Undefined variable {}", name)),
+            None => Err(format!("Undefined variable {}", name)),
         }
     }
 

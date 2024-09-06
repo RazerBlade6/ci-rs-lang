@@ -1,10 +1,14 @@
-//! # Module for the Token Struct and TokenType Enum
+//! # Tokens
 //!
-//! Contains definitions and implementations of Token and TokenType
+//! Tokens represent the lowest level of lexemes capable of being parsed by the language.
+//! While usually one or two characters, tokens may be as long as is needed to represent the data in question
+//! 
+//! TokenType is an enum that implements basic `to_string()` functionality, though it actually returns
+//! a `&str` valid for the lifetime of `&self` on which it is called. This is sufficient for most use cases 
+//! of the function, but the caller may need to clone the str if ownership is required
 //!
-//! TokenType implements basic `to_string()` functionality, though it actually returns
-//! an `&str`
-//!
+//! Token impl contains one constructor, `Token::new()`, that returns a Token.
+//! 
 //! ## Usage
 //! ```
 //! use token::*;

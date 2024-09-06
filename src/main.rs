@@ -9,18 +9,19 @@ mod scanner;
 mod stmt;
 mod token;
 
-use interpreter::Interpreter;
-use parser::*;
-use resolver::Resolver;
-use scanner::Scanner;
+use crate::{
+    interpreter::Interpreter,
+    parser::Parser,
+    scanner::Scanner,
+    stmt::Stmt,
+    resolver::Resolver,
+    token::Token
+};
 use std::{
     env, fs,
     io::{self, Write},
     process::exit,
 };
-use stmt::Stmt;
-use token::*;
-// use expr::{Expr, LitValue};
 
 fn run_prompt() -> Result<(), String> {
     let esc_key = match env::consts::OS {
@@ -99,7 +100,7 @@ fn main() {
         },
         _ => {
             println!("[Error] please use as lox ___");
-            exit(1)
+            exit(64)
         }
     }
 }
