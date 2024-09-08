@@ -20,7 +20,7 @@ pub enum Callables {
         environment: Environment,
     },
     NativeFunction {
-        name: Token,
+        name: String,
         arity: usize,
         fun: Rc<dyn Fn(Vec<Literal>) -> Result<Literal, String>>,
     },
@@ -91,7 +91,7 @@ impl Callables {
                 body: _,
                 environment: _,
             } => format!("<function> {}", name.lexeme),
-            Callables::NativeFunction { name, arity: _, fun: _ } => format!("<native function> {}", name.lexeme),
+            Callables::NativeFunction { name, arity: _, fun: _ } => format!("<native function> {name}"),
         }
     }
 }

@@ -1,3 +1,37 @@
+//! # Expressions
+//! 
+//! Expressions are the heart of the Lox Language, they represent a piece of code that 
+//! will be resolved into a value, and are used as the mid-level interface between the Token and Statements
+//! 
+//! Expressions are of many different types, any change to this enum will very likely be reflected in both the syntax 
+//! and semantics. Though an expression is a syntactic unit, it is tighly bound to the runtime as well, and as such
+//! changes to this module are difficult to implement. 
+//! 
+//! `Expr` implements various helper methods to create new variants, mainly because it extensively used `Box<Expr>` to represent 
+//! nested expressions. To simplify calls, these methods are to be used rather than directly creating `Expr::Variant {}`
+//! 
+//! Unlike Statements, which are **interpreted** during runtime, Expressions are **evaluated**. As such, the evaluation will 
+//! return a Literal, not generate an effcet visible to the user. 
+//! 
+//! ## Literal
+//! `Literal` is the implementation of the type system of Lox, a discriminated enum that is what allows dynamic 
+//! type systems in the statically-typed Rust. Literal is used extensively throughout the code, so adding more Literal Variants
+//! is highly discouraged. If an item can be implemented without adding extra Literals, that implementation is preferred.
+//! 
+//! Both `Expr` and `Literal` implement a `to_string()` method, used extensively.
+//! 
+//! ### Usage
+//! use expr::{Expr, Literal};
+//! use token::*;
+//! ```
+//! fn main() {
+//!     let left: Expr = Expr::literal(Literal::Number(45.2));
+//!     let token: Token = Token::new(Token::new(TokenType::Plus, "+", 0));
+//!     let right: Expr = Expr::literal(Literal::Number(21.1))
+//!     let expr: Expr = Expr::binary(left, token, right)
+//! }
+//! ```
+
 use crate::callable::Callables;
 use crate::environment::Environment;
 use crate::interpreter::Interpreter;
@@ -18,7 +52,7 @@ use {Callables::*, Literal::*};
 impl Literal {
     pub fn to_string(&self) -> String {
         match self {
-            Number(n) => return format!("{:.5}", n),
+            Number(n) => return format!("{}", n),
             Str(s) => return s.to_string(),
             Boolean(b) => return format!("{b}"),
             Nil => return String::from("nil"),
@@ -428,16 +462,14 @@ impl Expr {
     }
 
     fn call_native(
-        name: Token,
+        name: String,
         arity: usize,
         fun: Rc<dyn Fn(Vec<Literal>) -> Result<Literal, String>>,
         arguments: Vec<Literal>,
     ) -> Result<Literal, String> {
         if arguments.len() != arity {
             return Err(format!(
-                "Native function {} expected {} arguments but got {}",
-                name.lexeme,
-                arity,
+                "Native function {name} expected {arity} arguments but got {}",
                 arguments.len()
             ));
         }

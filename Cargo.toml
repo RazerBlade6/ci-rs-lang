@@ -1,7 +1,11 @@
 [package]
-name = "ic-rs-lang"
-version = "0.1.0"
+name = "rlox-lang"
+version = "1.0.0"
 edition = "2021"
 
 [dependencies]
 lazy_static = "1.4.0"
+
+[profile.dev]
+opt-level = 2
+overflow-checks = true

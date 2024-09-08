@@ -13,53 +13,48 @@
 
 use crate::callable::Callables;
 use crate::expr::Literal;
-use crate::token::*;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 pub fn globals() -> HashMap<String, Literal> {
     let mut globals = HashMap::new();
-    let mut name = Token::new(TokenType::Fun, "clock", 0);
     globals.insert(
         "clock".to_string(),
         Literal::Callable(Callables::NativeFunction {
-            name,
+            name: "clock".to_string(),
             arity: 0,
             fun: Rc::from(clock),
         }),
     );
-    name = Token::new(TokenType::Fun, "clear", 0);
+
     globals.insert(
         "clear".to_string(),
         Literal::Callable(Callables::NativeFunction {
-            name,
+            name: "clock".to_string(),
             arity: 0,
             fun: Rc::from(clear),
         }),
     );
-    name = Token::new(TokenType::Fun, "input", 0);
     globals.insert(
         "input".to_string(),
         Literal::Callable(Callables::NativeFunction {
-            name,
+            name: "input".to_string(),
             arity: 1,
             fun: Rc::from(input),
         }),
     );
-    name = Token::new(TokenType::Fun, "parse", 0);
     globals.insert(
         "parse".to_string(),
         Literal::Callable(Callables::NativeFunction {
-            name,
+            name: "parse".to_string(),
             arity: 2,
             fun: Rc::from(parse),
         }),
     );
-    name = Token::new(TokenType::Fun, "print", 0);
     globals.insert(
         "print".to_string(),
         Literal::Callable(Callables::NativeFunction {
-            name,
+            name: "print".to_string(),
             arity: 1,
             fun: Rc::from(print),
         }),

@@ -1,4 +1,8 @@
-use crate::{expr::Expr, stmt::Stmt, Token};
+use crate::{
+    expr::Expr, 
+    stmt::Stmt, 
+    token::Token
+};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -22,11 +26,13 @@ impl Resolver {
         }
     }
 
-    pub fn resolve(&mut self, statements: &Vec<&Stmt>) -> Result<(), String> {
+    pub fn resolve(&mut self, statements: &Vec<Stmt>) -> Result<HashMap<usize, usize>, String> {
         for statement in statements {
             self.resolve_statement(statement)?;
         }
-        Ok(())
+
+        let locals = self.locals.clone();
+        Ok(locals)
     }
 
     fn resolve_statement(&mut self, statement: &Stmt) -> Result<(), String> {
@@ -65,7 +71,7 @@ impl Resolver {
             }
             Stmt::Block { statements } => {
                 self.begin_scope();
-                self.resolve(&statements.iter().map(|s| s).collect())?;
+                self.resolve(statements)?;
                 self.end_scope();
             }
             Stmt::Function { name, params, body } => {
@@ -79,7 +85,7 @@ impl Resolver {
                     self.define(param);
                 }
 
-                self.resolve(&body.iter().map(|s| s).collect())?;
+                self.resolve(body)?;
                 self.end_scope();
                 self.function_type = parent_function;
             }

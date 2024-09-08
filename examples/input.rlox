@@ -1,6 +1,6 @@
-var time = clock();
 
 var max = input("Enter the number of fibonnaci numbers to calculate: ");
+var time = clock();
 max = parse(max, "number");
 
 fun fib(n) {

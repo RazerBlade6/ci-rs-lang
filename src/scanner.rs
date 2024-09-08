@@ -3,14 +3,14 @@
 //! A rudimentary source string Scanner + Lexer. The Scanner impl contains various
 //! utility methods to tokenize the input strings according to Lox's syntax rules.
 //! Any new tokens must be implemented within the method call stack, according to 
-//! its level 
+//! its level. 
 //!
 //! The only components of the public API of this module is a constructor `Scanner::new() -> Self` and 
 //! `Scanner::scan_tokens(&mut self)`.
 //! 
 //! ### Limitations
 //! Unfortunately, to maintain overall code integrity (A.K.A my poor design decisions) the Scanner must have tokens
-//! as a field, so it is not possible to move it out of Scanner until runtime termination
+//! as a field, so it is not possible to move it out of Scanner until runtime termination, or by cloninc the whole Vec
 //!
 //! ### Usage
 //! ```
@@ -24,7 +24,7 @@
 //! ```
 
 use crate::token::*;
-use lazy_static::*;
+use lazy_static::lazy_static;
 use std::collections::HashMap;
 
 pub struct Scanner {
@@ -69,7 +69,7 @@ impl Scanner {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Result<(), String> {
+    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, String> {
         while !self.is_at_end() {
             self.start = self.current;
             self.scan_token()?;
@@ -77,7 +77,7 @@ impl Scanner {
 
         let eof_token = Token::new(TokenType::Eof, "", self.line);
         self.tokens.push(eof_token);
-        Ok(())
+        Ok(self.tokens.clone())
     }
 
     fn is_at_end(&self) -> bool {
@@ -128,9 +128,7 @@ impl Scanner {
             }
             '/' => {
                 if self.expect('/') {
-                    while self.peek(0) != '\n' && !self.is_at_end() {
-                        self.advance();
-                    }
+                    self.single_line_comment();
                 } else if self.expect('*') {
                     self.multi_line_comment();
                 } else {
@@ -248,10 +246,23 @@ impl Scanner {
         self.add_token(token_type)
     }
 
+    fn single_line_comment(&mut self) {
+        while self.peek(0) != '\n' && !self.is_at_end() {
+            self.advance();
+        }
+    }
+
     fn multi_line_comment(&mut self) {
-        while self.peek(0) != '*' && !self.is_at_end() {
-            if self.peek(1) == '/' {
-                return;
+        loop {
+            let c = self.advance();
+            match c {
+                '/' => if self.expect('*') {
+                    self.multi_line_comment();
+                }
+                '*' => if self.expect('/') {
+                    return;
+                }
+                _ => ()
             }
         }
     }

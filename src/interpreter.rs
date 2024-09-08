@@ -60,10 +60,6 @@ impl Interpreter {
                     (false, None) => return Ok(()),
                 }
             }
-            // Stmt::Print { expr } => {
-            //     let result = expr.evaluate(self.environment.clone())?;
-            //     println!("{}", result.to_string());
-            // }
             Stmt::Var { name, initializer } => {
                 let value: Literal = match initializer {
                     Some(e) => e.evaluate(self.environment.clone())?,
