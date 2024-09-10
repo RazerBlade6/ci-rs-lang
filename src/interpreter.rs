@@ -1,3 +1,37 @@
+//! # Tree-Walk Interpreter
+//! 
+//! The Interpreter is the Execution block of the program, and is the final step in the runnning 
+//! of a Lox Program. A Tree-Walk Interpreter is an algorithm that relies on matching statement types
+//! against the parsed statements, and executing them as matched.
+//! 
+//! The biggest advantage of a Tree-Walk Interpreter is that it is very simple to implement, and the execution
+//! mirrors the semantics of the language. The disadvantage is that it is extremely slow. As the tree must be
+//! traversed with each call to execute, the program can rapidly consume stack memory and is REALLY slow to 
+//! run. 
+//! 
+//! If I cared enough, I might rewrite this with a better algorithm, either interpreting to assembly or to 
+//! some intermediate form like LLVM.
+//! 
+//! The Interpreter's public API is exactly one constructor `new() -> Self` and two 
+//! methods: `resolve(locals: HashMap<usize, usize)` and `interpret(statements: Vec<&Stmt>)`. The `resolve()`
+//! method is to be called first, and fed with the resolved statements from the resolver.
+//! 
+//! `execute()` accepts the parsed statements, and executes them.
+//! 
+//! ### Usage
+//! `Interpreter` is created before `run()` is invoked, as it contains the Runtime Environment and 
+//! as such, must persist between consecutive invocations of `run()`
+//! 
+//! ### Example
+//! ```
+//! use interpter::Interpter;
+//! 
+//! fn main() {
+//!     let interpreter = Interpreter::new();
+//!     let src = "Example code";
+//!     run(src, interpreter);
+//! }
+//! ```
 
 use crate::{
     callable::Callables,
@@ -34,6 +68,7 @@ impl Interpreter {
         }
     }
 
+    /// Interprets/executes the provided statements.
     pub fn interpret(&mut self, statements: Vec<&Stmt>) -> Result<(), String> {
         for statement in statements {
             self.execute(statement)?;
@@ -45,14 +80,14 @@ impl Interpreter {
     fn execute(&mut self, statement: &Stmt) -> Result<(), String> {
         match statement {
             Stmt::Expression { expr } => {
-                expr.evaluate(self.environment.clone())?;
+                expr.evaluate(&self.environment)?;
             }
             Stmt::If {
                 condition,
                 then_branch,
                 else_branch,
             } => {
-                let condition = condition.evaluate(self.environment.clone())?;
+                let condition = condition.evaluate(&self.environment)?;
 
                 match (condition.is_truthy(), else_branch) {
                     (true, _) => self.execute(&then_branch)?,
@@ -62,14 +97,14 @@ impl Interpreter {
             }
             Stmt::Var { name, initializer } => {
                 let value: Literal = match initializer {
-                    Some(e) => e.evaluate(self.environment.clone())?,
+                    Some(e) => e.evaluate(&self.environment)?,
                     None => Literal::Nil,
                 };
 
                 self.environment.define(name.lexeme.to_string(), value)
             }
             Stmt::While { condition, body } => {
-                while condition.evaluate(self.environment.clone())?.is_truthy() {
+                while condition.evaluate(&self.environment)?.is_truthy() {
                     self.execute(&body)?;
                 }
             }
@@ -95,7 +130,7 @@ impl Interpreter {
             }
             Stmt::Return { value } => {
                 self.ret = match value {
-                    Some(e) => Some(e.evaluate(self.environment.clone())?),
+                    Some(e) => Some(e.evaluate(&self.environment)?),
                     None => Some(Literal::Nil),
                 };
             }

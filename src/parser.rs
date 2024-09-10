@@ -42,6 +42,7 @@ impl Parser {
         }
     }
 
+    /// Parses the scanned tokens according to the grammar rules
     pub fn parse(&mut self) -> Result<Vec<Stmt>, String> {
         let mut statements: Vec<Stmt> = Vec::new();
         let mut errors: Vec<String> = Vec::new();
@@ -118,12 +119,13 @@ impl Parser {
 
     fn var_declaration(&mut self) -> Result<Stmt, String> {
         let name: Token = self.consume(TokenType::Identifier, "Expected variable name")?;
-        let initializer: Option<Expr>;
-        if self.match_tokens(&[TokenType::Equal]) {
-            initializer = Some(self.expression()?);
+        
+        let initializer = if self.match_tokens(&[TokenType::Equal]) {
+            Some(self.expression()?)
         } else {
-            initializer = None;
-        }
+            None
+        };
+
         if self.peek().token_type == TokenType::SemiColon {
             self.consume(
                 TokenType::SemiColon,
@@ -271,15 +273,15 @@ impl Parser {
 
     fn assigment(&mut self) -> Result<Expr, String> {
         let expr = self.or()?;
-
         if self.match_tokens(&[TokenType::Equal]) {
-            let equals = self.previous();
+            
             let value = self.assigment()?;
-            let (name, index) = match expr {
-                Expr::Variable { index, name } => (name, index),
-                _ => return Err(format!("Invalid assignment target {}", equals.lexeme)),
+            let (name, position, index) = match expr {
+                Expr::Variable { index, name } => (name, None, index),
+                Expr::Access { name, position, index } => (name, Some(position), index),
+                other => return Err(format!("Invalid assignment target {}", other.to_string())),
             };
-            return Ok(Expr::create_assigment(name, value, index));
+            return Ok(Expr::create_assigment(name, value, position, index));
         }
         Ok(expr)
     }
@@ -413,6 +415,20 @@ impl Parser {
                 self.consume(TokenType::RightParen, "Expected `)`")?;
                 return Ok(Expr::new_grouping(expr));
             }
+            TokenType::LeftBox => {
+                self.advance();
+                let mut elements: Vec<Expr> = vec![];
+                if !self.check(&TokenType::RightBox) {
+                    loop {
+                        elements.push(self.expression()?);
+                        if !self.match_tokens(&[TokenType::Comma]) {
+                            break;
+                        }
+                    }
+                }
+                self.consume(TokenType::RightBox, "Expected ']' after array elements")?;
+                Ok(Expr::array(elements))
+            }
             TokenType::False
             | TokenType::True
             | TokenType::Nil
@@ -422,9 +438,15 @@ impl Parser {
                 return Ok(Expr::new_literal(Literal::from_token(token)));
             }
             TokenType::Identifier => {
-                self.advance();
-                return Ok(Expr::create_variable(self.previous(), self.index()));
-            }
+                    self.advance();
+                    if self.match_tokens(&[TokenType::LeftBox]) {
+                        let position = self.expression()?;
+                        self.consume(TokenType::RightBox, "Expected ']' after array access")?;
+                        Ok(Expr::access(token, position, self.index()))
+                    } else {
+                        Ok(Expr::create_variable(self.previous(), self.index()))
+                    }    
+            },
             _ => return Err(format!("Line {}: Expected Expression", token.line)),
         }
     }

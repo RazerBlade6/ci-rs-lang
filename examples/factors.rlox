@@ -1,0 +1,17 @@
+fun factors(n) {
+    var factors = [];
+    var i = 0;
+    var x = 2;
+    while (x < n) {
+        if (n % x == 0) {
+            factors[i] = x;
+            i = i + 1;
+        }
+        x = x + 1;
+    }
+
+    return factors;
+}
+
+var factors = factors(720);
+print(factors);

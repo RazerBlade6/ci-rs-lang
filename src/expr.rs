@@ -11,7 +11,7 @@
 //! nested expressions. To simplify calls, these methods are to be used rather than directly creating `Expr::Variant {}`
 //! 
 //! Unlike Statements, which are **interpreted** during runtime, Expressions are **evaluated**. As such, the evaluation will 
-//! return a Literal, not generate an effcet visible to the user. 
+//! return a Literal, not generate an effect visible to the user. 
 //! 
 //! ## Literal
 //! `Literal` is the implementation of the type system of Lox, a discriminated enum that is what allows dynamic 
@@ -21,9 +21,10 @@
 //! Both `Expr` and `Literal` implement a `to_string()` method, used extensively.
 //! 
 //! ### Usage
+//! ```
 //! use expr::{Expr, Literal};
 //! use token::*;
-//! ```
+//! 
 //! fn main() {
 //!     let left: Expr = Expr::literal(Literal::Number(45.2));
 //!     let token: Token = Token::new(Token::new(TokenType::Plus, "+", 0));
@@ -45,6 +46,7 @@ pub enum Literal {
     Str(String),
     Boolean(bool),
     Nil,
+    Array(Vec<Literal>),
     Callable(Callables),
 }
 use {Callables::*, Literal::*};
@@ -56,6 +58,7 @@ impl Literal {
             Str(s) => return s.to_string(),
             Boolean(b) => return format!("{b}"),
             Nil => return String::from("nil"),
+            Array(a) => return format!("[{}]", a.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(", ")),
             Self::Callable(other) => other.to_string(),
         }
     }
@@ -66,6 +69,7 @@ impl Literal {
             Str(_) => return "String",
             Boolean(_) => return "Boolean",
             Nil => return "nil",
+            Array(_) => return "array",
             Callable(LoxFunction {
                 name: _,
                 params: _,
@@ -104,6 +108,7 @@ impl Literal {
             Number(x) => Boolean(*x == 0.0),
             Str(s) => Boolean(s.len() == 0),
             Boolean(b) => Boolean(*b),
+            Array(a) => Boolean(a.is_empty()),
             Nil => Boolean(true),
             Callable(_) => Boolean(false),
         }
@@ -114,6 +119,7 @@ impl Literal {
             Number(x) => return *x != 0.0,
             Str(s) => return s.len() != 0,
             Boolean(b) => return *b,
+            Array(a) => return !a.is_empty(),
             Nil => return false,
             Callable(_) => return true,
         }
@@ -122,6 +128,14 @@ impl Literal {
 
 #[derive(Debug, Clone)]
 pub enum Expr {
+    Array {
+        elements: Vec<Expr>
+    },
+    Access {
+        name: Token,
+        position: Box<Expr>,
+        index: usize
+    },
     Binary {
         left: Box<Expr>,
         operator: Token,
@@ -154,6 +168,7 @@ pub enum Expr {
     Assignment {
         name: Token,
         value: Box<Expr>,
+        position: Option<Box<Expr>>,
         index: usize,
     },
 }
@@ -161,6 +176,12 @@ pub enum Expr {
 impl Expr {
     pub fn to_string(&self) -> String {
         match self {
+            Expr::Access { name, position, index: _ } => {
+                format!("{}[{}]", name.lexeme, position.to_string())
+            }
+            Expr::Array { elements } => {
+                format!("[{}]", elements.iter().map(|b| b.to_string()).collect::<Vec<_>>().join(", "))
+            }
             Expr::Binary {
                 left,
                 operator,
@@ -186,6 +207,7 @@ impl Expr {
             Expr::Assignment {
                 name,
                 value,
+                position: _,
                 index: _,
             } => {
                 format!("{} = {}", name.lexeme, (*value).to_string())
@@ -210,6 +232,14 @@ impl Expr {
                 format!("function {}()", paren.lexeme)
             }
         }
+    }
+
+    pub fn array(elements: Vec<Expr>) -> Self {
+        Self::Array { elements }
+    }
+
+    pub fn access(name: Token, position: Expr, index: usize) -> Self {
+        Self::Access { name, position: Box::from(position), index }
     }
 
     pub fn new_binary(left: Expr, operator: Token, right: Expr) -> Self {
@@ -249,10 +279,11 @@ impl Expr {
         Self::Variable { index, name }
     }
 
-    pub fn create_assigment(name: Token, value: Expr, index: usize) -> Self {
+    pub fn create_assigment(name: Token, value: Expr, position: Option<Box<Expr>>, index: usize) -> Self {
         Self::Assignment {
             name,
             value: Box::from(value),
+            position,
             index,
         }
     }
@@ -265,7 +296,7 @@ impl Expr {
         }
     }
 
-    pub fn evaluate(&self, environment: Environment) -> Result<Literal, String> {
+    pub fn evaluate(&self, environment: &Environment) -> Result<Literal, String> {
         match &self {
             Expr::Literal { literal } => Ok((*literal).clone()),
 
@@ -281,9 +312,13 @@ impl Expr {
 
             Expr::Variable { name, index } => environment.get(&name.lexeme, *index),
 
-            Expr::Assignment { name, value, index } => {
-                Self::evaluate_assignment(environment, name, value, *index)
+            Expr::Assignment { name, value, position, index } => {
+                Self::evaluate_assignment(environment, name, value, position, *index)
             }
+
+            Expr::Array { elements } => Self::evaluate_array(environment, elements),
+
+            Expr::Access { name, position, index } => Self::evaluate_access(environment, name, position, *index),
 
             Expr::Logical {
                 left,
@@ -300,7 +335,7 @@ impl Expr {
     }
 
     fn evaluate_unary(
-        environment: Environment,
+        environment: &Environment,
         operator: &Token,
         right: &Box<Expr>,
     ) -> Result<Literal, String> {
@@ -317,12 +352,12 @@ impl Expr {
     }
 
     fn evaluate_binary(
-        environment: Environment,
+        environment: &Environment,
         left: &Box<Expr>,
         operator: &Token,
         right: &Box<Expr>,
     ) -> Result<Literal, String> {
-        let left = (*left).evaluate(environment.clone())?;
+        let left = (*left).evaluate(environment)?;
         let right = (*right).evaluate(environment)?;
 
         match (&left, operator.token_type, &right) {
@@ -364,23 +399,67 @@ impl Expr {
     }
 
     fn evaluate_assignment(
-        environment: Environment,
+        environment: &Environment,
         name: &Token,
         value: &Expr,
+        position: &Option<Box<Expr>>,
         index: usize,
     ) -> Result<Literal, String> {
-        let value = (*value).evaluate(environment.clone())?;
-        environment.assign(&name.lexeme, value.clone(), index)?;
-        Ok(value)
+        let value = value.evaluate(environment)?;
+        
+        if let Some(position) = position {
+            let position = if let Number(n) = position.evaluate(environment)? {
+                n.round() as usize
+            } else {
+                return Err(format!("Can only index into a list with number"))
+            };
+
+            let mut target = environment.get(&name.lexeme, index)?;
+            match target {
+                Array(ref mut array) => {
+                    if position > array.len() {
+                        return Err(format!("Attempted to assign at {} but array is of length {}", position, array.len()))
+                    } else if position == array.len() {
+                        array.push(value)
+                    } else {
+                        array[position] = value;
+                    }
+                    let value = Literal::Array(array.clone());
+                    environment.assign(&name.lexeme, value.clone(), index)?;
+                    return Ok(value)
+                },
+                Str(ref mut string) => {
+                    if position > string.len() {
+                        return Err(format!("Attempted to assign at {} but string is of length {}", position, string.len()))
+                    } else if position == string.len() {
+                        string.push_str(&value.to_string());
+                    } else {
+                        if value.to_string().len() > 1 {
+                            return Err(format!("Cannot assign length greater than 1 to middle of string"))
+                        } else {
+                            *string = (&string[0..position]).to_string() + &value.to_string() + &string[position + 1..string.len()];
+                        }
+                    }
+                    let value = Literal::Str(string.clone());
+                    environment.assign(&name.lexeme, value.clone(), index)?;
+                    return Ok(value);
+                },
+                other => return Err(format!("Cannot index into {}", other.to_type()))
+            }
+            
+        } else {
+            environment.assign(&name.lexeme, value.clone(), index)?;
+            Ok(value)
+        }
     }
 
     fn evaluate_logical(
-        environment: Environment,
+        environment: &Environment,
         left: &Expr,
         operator: &Token,
         right: &Expr,
     ) -> Result<Literal, String> {
-        let left: Literal = left.evaluate(environment.clone())?;
+        let left: Literal = left.evaluate(environment)?;
         if operator.token_type == TokenType::Or {
             if left.is_truthy() {
                 return Ok(left);
@@ -395,16 +474,16 @@ impl Expr {
     }
 
     fn evaluate_call(
-        environment: Environment,
+        environment: &Environment,
         callee: &Expr,
         _paren: &Token,
         args: &[Expr],
     ) -> Result<Literal, String> {
-        let callee = (*callee).evaluate(environment.clone())?;
+        let callee = (*callee).evaluate(environment)?;
 
         let mut arguments = vec![];
         for arg in args {
-            arguments.push(arg.evaluate(environment.clone())?);
+            arguments.push(arg.evaluate(environment)?);
         }
 
         match callee {
@@ -415,7 +494,7 @@ impl Expr {
                     arity,
                     body,
                     environment,
-                } => return Self::call_function(name, params, arity, body, environment, arguments),
+                } => return Self::call_function(name, params, arity, body, &environment, arguments),
                 NativeFunction { name, arity, fun } => {
                     return Self::call_native(name, arity, fun, arguments)
                 }
@@ -429,7 +508,7 @@ impl Expr {
         params: Vec<Token>,
         arity: usize,
         body: Vec<Stmt>,
-        environment: Environment,
+        environment: &Environment,
         arguments: Vec<Literal>,
     ) -> Result<Literal, String> {
         if arguments.len() != arity {
@@ -474,5 +553,36 @@ impl Expr {
             ));
         }
         Ok(fun(arguments)?)
+    }
+    
+    fn evaluate_array(environment: &Environment, elements: &[Expr]) -> Result<Literal, String> {
+        let mut array = vec![];
+        for element in elements {
+            array.push(element.evaluate(environment)?)
+        }
+
+        Ok(Literal::Array(array))
+    }
+    
+    fn evaluate_access(environment: &Environment, name: &Token, position: &Box<Expr>, index: usize) -> Result<Literal, String> {
+        let position = position.evaluate(environment)?;
+        let pos: usize;
+        if let Literal::Number(n) = position {
+            pos = n.round() as usize
+        } else {
+            return Err(format!("Cannot use type {} to index a list", position.to_type()))
+        }
+        
+        match environment.get(&name.lexeme, index)? {
+            Array(array) => match array.get(pos) {
+                Some(l) => return Ok(l.clone()),
+                None => return Err(format!("Attempted to get element {} from array of length {}", pos, array.len()))
+            }
+            Str(string) => match string.chars().nth(pos) {
+                Some(c) => return Ok(Literal::Str(String::from(c))),
+                None => return Err(format!("Attempted to get element {} from string of length {}", pos, string.len()))
+            },
+            other => return Err(format!("Cannot index into type {}", other.to_type()))
+        };
     }
 }

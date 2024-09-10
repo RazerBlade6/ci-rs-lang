@@ -28,18 +28,18 @@ fn run_prompt() -> Result<(), String> {
         "windows" => "CTRL + Z",
         _ => "CTRL + D",
     };
-    println!("Welcome to the Lox Interpreter!\nPress {} to exit", esc_key);
+    println!("Welcome to the Lox Interpreter!\nPress {esc_key} to exit");
 
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     let mut interpreter: Interpreter = Interpreter::new();
 
     loop {
-        let mut buffer = String::new();
+        let mut src = String::new();
         print!(">>> ");
         stdout.flush().unwrap();
 
-        match stdin.read_line(&mut buffer) {
+        match stdin.read_line(&mut src) {
             Ok(n) => {
                 if n == 0 {
                     println!("\nInterpreter Quit");
@@ -49,12 +49,14 @@ fn run_prompt() -> Result<(), String> {
             Err(_) => return Err(String::from("Failed to read input")),
         }
 
-        if &buffer == "\n" || &buffer == "\r\n" {
+        let src = src.trim();
+
+        if src.is_empty() {
             println!("");
             continue;
         }
 
-        match run(buffer.trim(), &mut interpreter) {
+        match run(src, &mut interpreter) {
             Ok(_) => (),
             Err(msg) => println!("\nERROR:\n{msg}\n"),
         };

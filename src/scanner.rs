@@ -10,7 +10,7 @@
 //! 
 //! ### Limitations
 //! Unfortunately, to maintain overall code integrity (A.K.A my poor design decisions) the Scanner must have tokens
-//! as a field, so it is not possible to move it out of Scanner until runtime termination, or by cloninc the whole Vec
+//! as a field, so it is not possible to move it out of Scanner until runtime termination, or by cloning the whole Vec
 //!
 //! ### Usage
 //! ```
@@ -69,6 +69,7 @@ impl Scanner {
         }
     }
 
+    /// Tokenizes the provided source string.
     pub fn scan_tokens(&mut self) -> Result<Vec<Token>, String> {
         while !self.is_at_end() {
             self.start = self.current;
@@ -89,6 +90,8 @@ impl Scanner {
         match c {
             '(' => self.add_token_t(TokenType::LeftParen),
             ')' => self.add_token_t(TokenType::RightParen),
+            '[' => self.add_token_t(TokenType::LeftBox),
+            ']' => self.add_token_t(TokenType::RightBox),
             '{' => self.add_token_t(TokenType::LeftBrace),
             '}' => self.add_token_t(TokenType::RightBrace),
             ',' => self.add_token_t(TokenType::Comma),
