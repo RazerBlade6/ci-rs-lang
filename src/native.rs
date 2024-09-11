@@ -1,12 +1,12 @@
 //! # Native Functions
-//! 
-//! This module contains various functions that contain core functionality that I 
+//!
+//! This module contains various functions that contain core functionality that I
 //! can't be bothered to try and figure out myself
-//! 
+//!
 //! For now, this contains `clock()`, which returns the current UNIX epoch time,
 //! `clear(),` which clears stdout, `print()`, which prints to stdout, appending `\n`,
 //! `input()`, which accepts input from the user, and `parse()` which converts between types
-//! 
+//!
 //! ### Future plans
 //! Currently this offers almost all basic functionality, I'd like to reduce my dependence on this
 //! by writing an independent standard library. Probably not happening anytime soon though.  

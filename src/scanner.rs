@@ -1,13 +1,13 @@
 //! # Scanner
-//! 
+//!
 //! A rudimentary source string Scanner + Lexer. The Scanner impl contains various
 //! utility methods to tokenize the input strings according to Lox's syntax rules.
-//! Any new tokens must be implemented within the method call stack, according to 
-//! its level. 
+//! Any new tokens must be implemented within the method call stack, according to
+//! its level.
 //!
-//! The only components of the public API of this module is a constructor `Scanner::new() -> Self` and 
+//! The only components of the public API of this module is a constructor `Scanner::new() -> Self` and
 //! `Scanner::scan_tokens(&mut self)`.
-//! 
+//!
 //! ### Limitations
 //! Unfortunately, to maintain overall code integrity (A.K.A my poor design decisions) the Scanner must have tokens
 //! as a field, so it is not possible to move it out of Scanner until runtime termination, or by cloning the whole Vec
@@ -15,7 +15,7 @@
 //! ### Usage
 //! ```
 //! use scanner::Scanner;
-//! 
+//!
 //! fn main() {
 //!     let src: &str = "some_example_str";
 //!     let mut scanner: Scanner = Scanner::new(src);
@@ -259,13 +259,17 @@ impl Scanner {
         loop {
             let c = self.advance();
             match c {
-                '/' => if self.expect('*') {
-                    self.multi_line_comment();
+                '/' => {
+                    if self.expect('*') {
+                        self.multi_line_comment();
+                    }
                 }
-                '*' => if self.expect('/') {
-                    return;
+                '*' => {
+                    if self.expect('/') {
+                        return;
+                    }
                 }
-                _ => ()
+                _ => (),
             }
         }
     }

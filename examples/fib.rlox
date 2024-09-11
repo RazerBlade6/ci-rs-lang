@@ -1,0 +1,15 @@
+var now = clock();
+
+fun fib(n) {
+    if (n <= 1) {
+        return 1;
+    }
+
+    return fib(n - 2) + fib (n - 1); 
+}
+
+for (var i = 0; i < 30; i = i + 1) {
+    print(fib(i));
+}
+
+print(clock() - now + "s");

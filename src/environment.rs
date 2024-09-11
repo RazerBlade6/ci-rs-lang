@@ -60,6 +60,7 @@ impl Environment {
 
     fn get_at_distance(&self, name: &str, distance: Option<usize>) -> Option<Literal> {
         if let Some(distance) = distance {
+            println!("distance: {distance}");
             match distance {
                 0 => self.values.borrow().get(name).cloned(),
                 _ => self

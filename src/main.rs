@@ -10,12 +10,8 @@ mod stmt;
 mod token;
 
 use crate::{
-    interpreter::Interpreter,
-    parser::Parser,
-    scanner::Scanner,
-    stmt::Stmt,
-    resolver::Resolver,
-    token::Token
+    interpreter::Interpreter, parser::Parser, resolver::Resolver, scanner::Scanner, stmt::Stmt,
+    token::Token,
 };
 use std::{
     env, fs,
@@ -77,7 +73,6 @@ fn run(src: &str, interpreter: &mut Interpreter) -> Result<(), String> {
     let mut scanner: Scanner = Scanner::new(src);
     let tokens: Vec<Token> = scanner.scan_tokens()?;
 
-
     let mut parser: Parser = Parser::new(tokens);
     let statements: Vec<Stmt> = parser.parse()?;
 
@@ -91,6 +86,7 @@ fn run(src: &str, interpreter: &mut Interpreter) -> Result<(), String> {
 }
 
 fn main() {
+    env::set_var("RUST_BACKTRACE", "1");
     let args: Vec<String> = env::args().collect();
     match args.len() {
         1 => match run_prompt() {

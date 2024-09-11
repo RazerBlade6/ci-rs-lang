@@ -1,10 +1,10 @@
 //! # Callables
-//! 
-//! Since I couldn't figure out a more elegant solution, this module exists solely 
-//! as a store for Callable Literals, as they are quite large in comparison to other 
+//!
+//! Since I couldn't figure out a more elegant solution, this module exists solely
+//! as a store for Callable Literals, as they are quite large in comparison to other
 //! Literals. It also implements `Debug` and `PartialEq` on callables, as `#[derive()]` macros
-//! cannot generate them. 
-//! 
+//! cannot generate them.
+//!
 //! This enum only exists within `expr::Literal`, all details for Usage are found there.
 
 use crate::{environment::Environment, expr::Literal, stmt::Stmt, Token};
@@ -91,7 +91,11 @@ impl Callables {
                 body: _,
                 environment: _,
             } => format!("<function> {}", name.lexeme),
-            Callables::NativeFunction { name, arity: _, fun: _ } => format!("<native function> {name}"),
+            Callables::NativeFunction {
+                name,
+                arity: _,
+                fun: _,
+            } => format!("<native function> {name}"),
         }
     }
 }

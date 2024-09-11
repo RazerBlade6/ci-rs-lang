@@ -1,31 +1,31 @@
 //! # Tree-Walk Interpreter
-//! 
-//! The Interpreter is the Execution block of the program, and is the final step in the runnning 
+//!
+//! The Interpreter is the Execution block of the program, and is the final step in the runnning
 //! of a Lox Program. A Tree-Walk Interpreter is an algorithm that relies on matching statement types
 //! against the parsed statements, and executing them as matched.
-//! 
+//!
 //! The biggest advantage of a Tree-Walk Interpreter is that it is very simple to implement, and the execution
 //! mirrors the semantics of the language. The disadvantage is that it is extremely slow. As the tree must be
-//! traversed with each call to execute, the program can rapidly consume stack memory and is REALLY slow to 
-//! run. 
-//! 
-//! If I cared enough, I might rewrite this with a better algorithm, either interpreting to assembly or to 
+//! traversed with each call to execute, the program can rapidly consume stack memory and is REALLY slow to
+//! run.
+//!
+//! If I cared enough, I might rewrite this with a better algorithm, either interpreting to assembly or to
 //! some intermediate form like LLVM.
-//! 
-//! The Interpreter's public API is exactly one constructor `new() -> Self` and two 
+//!
+//! The Interpreter's public API is exactly one constructor `new() -> Self` and two
 //! methods: `resolve(locals: HashMap<usize, usize)` and `interpret(statements: Vec<&Stmt>)`. The `resolve()`
 //! method is to be called first, and fed with the resolved statements from the resolver.
-//! 
+//!
 //! `execute()` accepts the parsed statements, and executes them.
-//! 
+//!
 //! ### Usage
-//! `Interpreter` is created before `run()` is invoked, as it contains the Runtime Environment and 
+//! `Interpreter` is created before `run()` is invoked, as it contains the Runtime Environment and
 //! as such, must persist between consecutive invocations of `run()`
-//! 
+//!
 //! ### Example
 //! ```
 //! use interpter::Interpter;
-//! 
+//!
 //! fn main() {
 //!     let interpreter = Interpreter::new();
 //!     let src = "Example code";
@@ -33,12 +33,7 @@
 //! }
 //! ```
 
-use crate::{
-    callable::Callables,
-    environment::Environment,
-    expr::Literal,
-    stmt::Stmt
-};
+use crate::{callable::Callables, environment::Environment, expr::Literal, stmt::Stmt};
 
 use std::collections::HashMap;
 
