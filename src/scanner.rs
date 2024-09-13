@@ -27,8 +27,8 @@ use crate::token::*;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 
-pub struct Scanner {
-    src: String,
+pub struct Scanner<'a> {
+    src: &'a str,
     pub tokens: Vec<Token>,
     start: usize,
     current: usize,
@@ -58,10 +58,10 @@ lazy_static! {
     };
 }
 
-impl Scanner {
-    pub fn new(src: &str) -> Self {
+impl<'a> Scanner<'a> {
+    pub fn new(src: &'a str) -> Self {
         Self {
-            src: src.to_string(),
+            src,
             tokens: Vec::new(),
             start: 0,
             current: 0,
@@ -70,7 +70,7 @@ impl Scanner {
     }
 
     /// Tokenizes the provided source string.
-    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, String> {
+    pub fn scan_tokens(&mut self) -> Result<&Vec<Token>, String> {
         while !self.is_at_end() {
             self.start = self.current;
             self.scan_token()?;
@@ -78,7 +78,7 @@ impl Scanner {
 
         let eof_token = Token::new(TokenType::Eof, "", self.line);
         self.tokens.push(eof_token);
-        Ok(self.tokens.clone())
+        Ok(&self.tokens)
     }
 
     fn is_at_end(&self) -> bool {

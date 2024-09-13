@@ -93,7 +93,7 @@ impl Literal {
         }
     }
 
-    pub fn from_token(token: Token) -> Self {
+    pub fn from_token(token: &Token) -> Self {
         match token.token_type {
             TokenType::Number => Self::Number(match token.lexeme.parse::<f64>() {
                 Ok(f) => f,
@@ -135,129 +135,114 @@ impl Literal {
 }
 
 #[derive(Debug, Clone)]
-pub enum Expr {
+pub enum Expr<'c> {
     Array {
-        elements: Vec<Expr>,
+        elements: Vec<Expr<'c>>,
     },
     Access {
         name: Token,
-        position: Box<Expr>,
+        position: Box<Expr<'c>>,
         index: usize,
     },
     Binary {
-        left: Box<Expr>,
-        operator: Token,
-        right: Box<Expr>,
+        left: Box<Expr<'c>>,
+        operator: &'c Token,
+        right: Box<Expr<'c>>,
     },
     Grouping {
-        expr: Box<Expr>,
+        expr: Box<Expr<'c>>,
     },
     Call {
-        callee: Box<Expr>,
-        paren: Token,
-        args: Vec<Expr>,
+        callee: Box<Expr<'c>>,
+        paren: &'c Token,
+        args: Vec<Expr<'c>>,
     },
     Literal {
-        literal: Literal,
+        literal: &'c Literal,
     },
     Logical {
-        left: Box<Expr>,
-        operator: Token,
-        right: Box<Expr>,
+        left: Box<Expr<'c>>,
+        operator: &'c Token,
+        right: Box<Expr<'c>>,
     },
     Unary {
-        operator: Token,
-        right: Box<Expr>,
+        operator: &'c Token,
+        right: Box<Expr<'c>>,
     },
     Variable {
         index: usize,
-        name: Token,
+        name: &'c Token,
     },
     Assignment {
-        name: Token,
-        value: Box<Expr>,
-        position: Option<Box<Expr>>,
+        name: &'c Token,
+        value: Box<Expr<'c>>,
+        position: Option<Box<Expr<'c>>>,
         index: usize,
     },
 }
 
-impl Expr {
+impl<'c> Expr<'c> {
     pub fn to_string(&self) -> String {
         match self {
             Expr::Access {
                 name,
                 position,
                 index: _,
-            } => {
-                format!("{}[{}]", name.lexeme, position.to_string())
-            }
-            Expr::Array { elements } => {
-                format!(
-                    "[{}]",
-                    elements
-                        .iter()
-                        .map(|b| b.to_string())
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                )
-            }
+            } => format!("{}[{}]", name.lexeme, position.to_string()),
+            Expr::Array { elements } => format!(
+                "[{}]",
+                elements
+                    .iter()
+                    .map(|b| b.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
             Expr::Binary {
                 left,
                 operator,
                 right,
-            } => {
-                format!(
-                    "{} {} {}",
-                    operator.lexeme,
-                    (*left).to_string(),
-                    (*right).to_string()
-                )
-            }
-            Expr::Grouping { expr } => {
-                format!("({})", (*expr).to_string())
-            }
-            Expr::Literal { literal } => {
-                format!("{}", literal.to_string())
-            }
+            } => format!(
+                "{} {} {}",
+                operator.lexeme,
+                (*left).to_string(),
+                (*right).to_string()
+            ),
+            Expr::Grouping { expr } => format!("({})", (*expr).to_string()),
+            Expr::Literal { literal } => format!("{}", literal.to_string()),
             Expr::Unary { operator, right } => {
                 format!("{}{}", operator.lexeme, (*right).to_string())
             }
+
             Expr::Variable { index: _, name } => name.lexeme.to_string(),
             Expr::Assignment {
                 name,
                 value,
                 position: _,
                 index: _,
-            } => {
-                format!("{} = {}", name.lexeme, (*value).to_string())
-            }
+            } => format!("{} = {}", name.lexeme, (*value).to_string()),
             Expr::Logical {
                 left,
                 operator,
                 right,
-            } => {
-                format!(
-                    "`{}` {} `{}`",
-                    (*left).to_string(),
-                    operator.lexeme,
-                    (*right).to_string()
-                )
-            }
+            } => format!(
+                "`{}` {} `{}`",
+                (*left).to_string(),
+                operator.lexeme,
+                (*right).to_string()
+            ),
             Expr::Call {
                 callee: _,
                 paren,
                 args: _,
-            } => {
-                format!("function {}()", paren.lexeme)
-            }
+            } => format!("function {}()", paren.lexeme),
         }
     }
 
-    pub fn array(elements: Vec<Expr>) -> Self {
+    pub fn array(elements: Vec<Expr<'c>>) -> Self {
         Self::Array { elements }
     }
 
-    pub fn access(name: Token, position: Expr, index: usize) -> Self {
+    pub fn access(name: Token, position: Expr<'c>, index: usize) -> Self {
         Self::Access {
             name,
             position: Box::from(position),
@@ -265,7 +250,7 @@ impl Expr {
         }
     }
 
-    pub fn new_binary(left: Expr, operator: Token, right: Expr) -> Self {
+    pub fn new_binary(left: Expr<'c>, operator: &'c Token, right: Expr<'c>) -> Self {
         Self::Binary {
             left: Box::from(left),
             operator,
@@ -273,17 +258,17 @@ impl Expr {
         }
     }
 
-    pub fn new_grouping(expr: Expr) -> Self {
+    pub fn new_grouping(expr: Expr<'c>) -> Self {
         Self::Grouping {
             expr: Box::from(expr),
         }
     }
 
-    pub fn new_literal(literal: Literal) -> Self {
+    pub fn new_literal(literal: &'c Literal) -> Self {
         Self::Literal { literal }
     }
 
-    pub fn new_logical(left: Expr, operator: Token, right: Expr) -> Self {
+    pub fn new_logical(left: Expr<'c>, operator: &'c Token, right: Expr<'c>) -> Self {
         Self::Logical {
             left: Box::from(left),
             operator,
@@ -291,21 +276,21 @@ impl Expr {
         }
     }
 
-    pub fn create_unary(operator: Token, right: Expr) -> Self {
+    pub fn create_unary(operator: &'c Token, right: Expr<'c>) -> Self {
         Self::Unary {
             operator,
             right: Box::from(right),
         }
     }
 
-    pub fn create_variable(name: Token, index: usize) -> Self {
+    pub fn create_variable(name: &'c Token, index: usize) -> Self {
         Self::Variable { index, name }
     }
 
     pub fn create_assigment(
-        name: Token,
-        value: Expr,
-        position: Option<Box<Expr>>,
+        name: &'c Token,
+        value: Expr<'c>,
+        position: Option<Box<Expr<'c>>>,
         index: usize,
     ) -> Self {
         Self::Assignment {
@@ -316,7 +301,7 @@ impl Expr {
         }
     }
 
-    pub fn create_call(callee: Expr, paren: Token, args: Vec<Expr>) -> Self {
+    pub fn create_call(callee: Expr<'c>, paren: &'c Token, args: Vec<Expr<'c>>) -> Self {
         Self::Call {
             callee: Box::from(callee),
             paren,
@@ -594,7 +579,6 @@ impl Expr {
         fun: Rc<dyn Fn(Vec<Literal>) -> Result<Literal, String>>,
         arguments: Vec<Literal>,
     ) -> Result<Literal, String> {
-        dbg!(&arguments);
         if arguments.len() != arity {
             return Err(format!(
                 "Native function {name} expected {arity} arguments but got {}",

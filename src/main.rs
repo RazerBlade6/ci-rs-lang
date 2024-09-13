@@ -71,9 +71,9 @@ fn run_file(path: &str) -> Result<(), String> {
 
 fn run(src: &str, interpreter: &mut Interpreter) -> Result<(), String> {
     let mut scanner: Scanner = Scanner::new(src);
-    let tokens: Vec<Token> = scanner.scan_tokens()?;
+    let tokens: &Vec<Token> = scanner.scan_tokens()?;
 
-    let mut parser: Parser = Parser::new(tokens);
+    let mut parser: Parser = Parser::new(&tokens);
     let statements: Vec<Stmt> = parser.parse()?;
 
     let mut resolver = Resolver::new();

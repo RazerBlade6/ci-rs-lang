@@ -22,6 +22,7 @@ print(count);
 var a = "global";
 
 fun outer() {
+    print(a);
     fun example() {
         print(a);   
     }

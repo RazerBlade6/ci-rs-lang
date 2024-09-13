@@ -22,14 +22,14 @@
 
 use crate::{expr::*, stmt::Stmt, token::Token, token::TokenType};
 
-pub struct Parser {
-    tokens: Vec<Token>,
+pub struct Parser<'b> {
+    tokens: &'b Vec<Token>,
     current: usize,
     index: usize,
 }
 
-impl Parser {
-    pub fn new(tokens: Vec<Token>) -> Self {
+impl<'b> Parser<'b> {
+    pub fn new(tokens: &'b Vec<Token>) -> Self {
         Self {
             tokens,
             current: 0,
@@ -404,7 +404,7 @@ impl Parser {
     }
 
     fn primary(&mut self) -> Result<Expr, String> {
-        let token = self.peek().clone();
+        let token = self.peek();
         match token.token_type {
             TokenType::LeftParen => {
                 self.advance();
@@ -482,7 +482,7 @@ impl Parser {
         }
     }
 
-    fn consume(&mut self, token_type: TokenType, msg: &str) -> Result<Token, String> {
+    fn consume(&mut self, token_type: TokenType, msg: &str) -> Result<&Token, String> {
         let token = self.peek();
         if token.token_type == token_type {
             self.advance();
@@ -493,7 +493,7 @@ impl Parser {
         }
     }
 
-    fn advance(&mut self) -> Token {
+    fn advance(&mut self) -> &Token {
         if !self.is_at_end() {
             self.current += 1
         }
@@ -516,7 +516,7 @@ impl Parser {
         &self.tokens[self.current]
     }
 
-    fn previous(&mut self) -> Token {
-        self.tokens[self.current - 1].clone()
+    fn previous(&mut self) -> &Token {
+        &self.tokens[self.current - 1]
     }
 }
