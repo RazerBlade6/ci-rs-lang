@@ -1,21 +1,21 @@
 //! # Resolver
-//!
+//! 
 //! The Resolver is the component responsible for the pre-runtime compilation (for lack of a better term)
 //! of the program. It consitutes the Static Semantic Analysis, which currently only involves replacing
 //! variables with their known runtime values for faster execution. In theory, this block
 //! would also be used if there were any Macros or other such construct requiring pre-processing.
-//!
+//! 
 //! ### Usage
-//!
+//! 
 //! The `Resolver::resolve(&mut self, &Vec<Stmt>)` method takes the parsed statements
 //! and applies the resolution pass on them. This method returns a `HashMap<usize, usize>` which
 //! should then be passed to `Interpreter::resolve()` to finish the local variable analysis pass
-//!
+//! 
 //! ### Example
 //! ```
 //! use resolver::Resolver;
 //! use interpreter::Interpreter;
-//!
+//! 
 //! fn main() {
 //!     let statements = vec![]; // Parsed statements here    
 //!     let mut resolver = Resolver::new();
@@ -24,9 +24,13 @@
 //!     interpreter.resolve(locals);
 //!     interpreter.interpret(statements);
 //! }
-//! ```
+//! ``` 
 
-use crate::{expr::Expr, stmt::Stmt, token::Token};
+use crate::{
+    expr::Expr, 
+    stmt::Stmt, 
+    token::Token
+};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -120,11 +124,7 @@ impl Resolver {
 
     fn resolve_expr(&mut self, expr: &Expr) -> Result<(), String> {
         match expr {
-            Expr::Access {
-                name: _,
-                position,
-                index: _,
-            } => {
+            Expr::Access { name: _, position, index: _ } => {
                 self.resolve_expr(&position)?;
             }
             Expr::Binary {
@@ -171,18 +171,13 @@ impl Resolver {
                 }
                 self.resolve_local(name, *index);
             }
-            Expr::Assignment {
-                name,
-                value,
-                position,
-                index,
-            } => {
+            Expr::Assignment { name, value, position, index } => {
                 self.resolve_expr(value)?;
                 self.resolve_local(name, *index);
                 if let Some(position) = position {
                     self.resolve_expr(position)?;
                 }
-            }
+            },
             Expr::Array { elements } => {
                 for element in elements {
                     self.resolve_expr(element)?;

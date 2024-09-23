@@ -1,13 +1,13 @@
 //! # Scanner
-//!
+//! 
 //! A rudimentary source string Scanner + Lexer. The Scanner impl contains various
 //! utility methods to tokenize the input strings according to Lox's syntax rules.
-//! Any new tokens must be implemented within the method call stack, according to
-//! its level.
+//! Any new tokens must be implemented within the method call stack, according to 
+//! its level. 
 //!
-//! The only components of the public API of this module is a constructor `Scanner::new() -> Self` and
+//! The only components of the public API of this module is a constructor `Scanner::new() -> Self` and 
 //! `Scanner::scan_tokens(&mut self)`.
-//!
+//! 
 //! ### Limitations
 //! Unfortunately, to maintain overall code integrity (A.K.A my poor design decisions) the Scanner must have tokens
 //! as a field, so it is not possible to move it out of Scanner until runtime termination, or by cloning the whole Vec
@@ -15,7 +15,7 @@
 //! ### Usage
 //! ```
 //! use scanner::Scanner;
-//!
+//! 
 //! fn main() {
 //!     let src: &str = "some_example_str";
 //!     let mut scanner: Scanner = Scanner::new(src);
@@ -27,8 +27,8 @@ use crate::token::*;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 
-pub struct Scanner<'a> {
-    src: &'a str,
+pub struct Scanner {
+    src: String,
     pub tokens: Vec<Token>,
     start: usize,
     current: usize,
@@ -58,10 +58,10 @@ lazy_static! {
     };
 }
 
-impl<'a> Scanner<'a> {
-    pub fn new(src: &'a str) -> Self {
+impl Scanner {
+    pub fn new(src: &str) -> Self {
         Self {
-            src,
+            src: src.to_string(),
             tokens: Vec::new(),
             start: 0,
             current: 0,
@@ -70,7 +70,7 @@ impl<'a> Scanner<'a> {
     }
 
     /// Tokenizes the provided source string.
-    pub fn scan_tokens(&mut self) -> Result<&Vec<Token>, String> {
+    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, String> {
         while !self.is_at_end() {
             self.start = self.current;
             self.scan_token()?;
@@ -78,7 +78,7 @@ impl<'a> Scanner<'a> {
 
         let eof_token = Token::new(TokenType::Eof, "", self.line);
         self.tokens.push(eof_token);
-        Ok(&self.tokens)
+        Ok(self.tokens.clone())
     }
 
     fn is_at_end(&self) -> bool {
@@ -259,17 +259,13 @@ impl<'a> Scanner<'a> {
         loop {
             let c = self.advance();
             match c {
-                '/' => {
-                    if self.expect('*') {
-                        self.multi_line_comment();
-                    }
+                '/' => if self.expect('*') {
+                    self.multi_line_comment();
                 }
-                '*' => {
-                    if self.expect('/') {
-                        return;
-                    }
+                '*' => if self.expect('/') {
+                    return;
                 }
-                _ => (),
+                _ => ()
             }
         }
     }

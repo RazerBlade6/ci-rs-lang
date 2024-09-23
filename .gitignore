@@ -1,7 +1,4 @@
 target
 .vscode
 src/tests
-docs
 bin
-Cargo.lock
-rlox-lang.exe

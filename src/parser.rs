@@ -1,35 +1,40 @@
 //! # Recursive Descent Parser
-//!
-//! A recursive-descent parser generates an Abstract Syntax Tree by recursively calling
+//! 
+//! A recursive-descent parser generates an Abstract Syntax Tree by recursively calling 
 //! helper functions that are arranged to encode the formal syntax of a language
-//!
+//! 
 //! The public API of this module consists of `Parser::new()` and `parse(&mut self) -> Result<Vec<Stmt>, String>`
 //! The parser instance does not itself have ownership of the parsed syntax tree, so it can be freely
 //! owned by the caller.
-//!
+//! 
 //! To find the exact syntax order and precendence rules, please see `docs/expressions.txt` and `docs/statements.txt`
-//!
+//! 
 //! ### Usage
 //! ```
 //! use parser::Parser;
-//!
+//! 
 //! fn main() {
 //!     let tokens = vec![] // this would be the tokens as obtained from the Scanner
 //!     let mut parser = Parser::new(tokens)
 //!     let statements = parser.parse()?;
 //! }
-//! ```
+//! ``` 
 
-use crate::{expr::*, stmt::Stmt, token::Token, token::TokenType};
+use crate::{
+    expr::*,
+    stmt::Stmt,
+    token::Token, 
+    token::TokenType,
+};
 
-pub struct Parser<'b> {
-    tokens: &'b Vec<Token>,
+pub struct Parser {
+    tokens: Vec<Token>,
     current: usize,
     index: usize,
 }
 
-impl<'b> Parser<'b> {
-    pub fn new(tokens: &'b Vec<Token>) -> Self {
+impl Parser {
+    pub fn new(tokens: Vec<Token>) -> Self {
         Self {
             tokens,
             current: 0,
@@ -58,7 +63,7 @@ impl<'b> Parser<'b> {
             Err(errors.join("\n"))
         }
     }
-
+    
     fn index(&mut self) -> usize {
         let index = self.index;
         self.index += 1;
@@ -114,7 +119,7 @@ impl<'b> Parser<'b> {
 
     fn var_declaration(&mut self) -> Result<Stmt, String> {
         let name: Token = self.consume(TokenType::Identifier, "Expected variable name")?;
-
+        
         let initializer = if self.match_tokens(&[TokenType::Equal]) {
             Some(self.expression()?)
         } else {
@@ -269,14 +274,11 @@ impl<'b> Parser<'b> {
     fn assigment(&mut self) -> Result<Expr, String> {
         let expr = self.or()?;
         if self.match_tokens(&[TokenType::Equal]) {
+            
             let value = self.assigment()?;
             let (name, position, index) = match expr {
                 Expr::Variable { index, name } => (name, None, index),
-                Expr::Access {
-                    name,
-                    position,
-                    index,
-                } => (name, Some(position), index),
+                Expr::Access { name, position, index } => (name, Some(position), index),
                 other => return Err(format!("Invalid assignment target {}", other.to_string())),
             };
             return Ok(Expr::create_assigment(name, value, position, index));
@@ -379,6 +381,7 @@ impl<'b> Parser<'b> {
             }
         }
 
+
         Ok(expr)
     }
 
@@ -404,7 +407,7 @@ impl<'b> Parser<'b> {
     }
 
     fn primary(&mut self) -> Result<Expr, String> {
-        let token = self.peek();
+        let token = self.peek().clone();
         match token.token_type {
             TokenType::LeftParen => {
                 self.advance();
@@ -435,15 +438,15 @@ impl<'b> Parser<'b> {
                 return Ok(Expr::new_literal(Literal::from_token(token)));
             }
             TokenType::Identifier => {
-                self.advance();
-                if self.match_tokens(&[TokenType::LeftBox]) {
-                    let position = self.expression()?;
-                    self.consume(TokenType::RightBox, "Expected ']' after array access")?;
-                    Ok(Expr::access(token, position, self.index()))
-                } else {
-                    Ok(Expr::create_variable(self.previous(), self.index()))
-                }
-            }
+                    self.advance();
+                    if self.match_tokens(&[TokenType::LeftBox]) {
+                        let position = self.expression()?;
+                        self.consume(TokenType::RightBox, "Expected ']' after array access")?;
+                        Ok(Expr::access(token, position, self.index()))
+                    } else {
+                        Ok(Expr::create_variable(self.previous(), self.index()))
+                    }    
+            },
             _ => return Err(format!("Line {}: Expected Expression", token.line)),
         }
     }
@@ -475,6 +478,7 @@ impl<'b> Parser<'b> {
                 | TokenType::For
                 | TokenType::If
                 | TokenType::While
+                // | TokenType::Print
                 | TokenType::Return => return,
                 _ => (),
             }
@@ -482,7 +486,7 @@ impl<'b> Parser<'b> {
         }
     }
 
-    fn consume(&mut self, token_type: TokenType, msg: &str) -> Result<&Token, String> {
+    fn consume(&mut self, token_type: TokenType, msg: &str) -> Result<Token, String> {
         let token = self.peek();
         if token.token_type == token_type {
             self.advance();
@@ -493,7 +497,7 @@ impl<'b> Parser<'b> {
         }
     }
 
-    fn advance(&mut self) -> &Token {
+    fn advance(&mut self) -> Token {
         if !self.is_at_end() {
             self.current += 1
         }
@@ -516,7 +520,7 @@ impl<'b> Parser<'b> {
         &self.tokens[self.current]
     }
 
-    fn previous(&mut self) -> &Token {
-        &self.tokens[self.current - 1]
+    fn previous(&mut self) -> Token {
+        self.tokens[self.current - 1].clone()
     }
 }

@@ -12,17 +12,15 @@ fun make_counter() {
 var count = make_counter();
 count(); 
 count(); 
+count = make_counter();
 count();
 count();
 count();
 count();
-
-print(count);
 
 var a = "global";
 
 fun outer() {
-    print(a);
     fun example() {
         print(a);   
     }

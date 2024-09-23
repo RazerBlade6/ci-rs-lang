@@ -1,0 +1,78 @@
+#######################################################################
+############################ Grammar Rules ############################
+#######################################################################
+
+program        → ( statement )* EOF ;     
+
+statement      → block
+               | declaration
+               | executable ;
+
+block          → "{" statement* "}" ;
+
+declaration    → funDecl
+               | classDecl
+               | varDecl
+
+varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
+classDecl      → "class" IDENTIFIER "{" function* "}" ;
+funDecl        → "fun" IDENTIFIER "(" ("," variable)*? ")" statement;
+
+executable     → exprStmt
+               | forStmt
+               | ifStmt
+               | returnStmt
+               | whileStmt
+               | functionStmt ;
+
+exprStmt       → expression ";" ;
+forStmt        → "for" "(" ( (varDecl | exprStmt)? ";" )
+                 expression? ";"
+                 expression? ")" statement ;
+ifStmt         → "if" "(" expression ")" statement
+               ( "else" statement )? ;
+returnStmt     → "return" expression? ";" ;
+whileStmt      → "while" "(" expression ")" statement ;
+functionStmt   → IDENTIFIER "(" ("," IDENTIFIER )*? ")" block ;
+
+expression     → literal
+               | array
+               | access
+               | unary
+               | variable
+               | binary
+               | grouping
+               | logic_and
+               | logic_or
+               | assignment;
+
+assignment     → IDENTIFIER "=" assignment ;
+array          → "[" ("," expression)*? "]" ;
+access         → IDENTIFIER "[" expression "]" ;
+logic_or       → logic_and ( "or" logic_and )* ;
+logic_and      → equality ( "and" equality )* ;
+literal        → NUMBER | STRING | "true" | "false" | "nil" ;
+grouping       → "(" expression ")" ;
+variable       → IDENTIFIER ;
+unary          → ( "-" | "!" ) expression ;
+binary         → expression operator expression ;
+operator       → "==" | "!=" | "<" | "<=" | ">" | ">="
+               | "+"  | "-"  | "*" | "/"  | "%";
+call           → primary ( "(" arguments? ")" )* ; 
+
+Precedence Rules: Highest to Lowest
+    | 1. ()                 → Call
+    | 2. !  | -             → Unary
+    | 3. /  | *  | %        → Factor
+    | 4. +  | -             → Term
+    | 5. >  | >= | <= | <   → Comparison
+    | 6. == | !=            → Equality
+
+primary        → "true" | "false" | "nil"
+               | NUMBER | STRING
+               | "(" expression ")"
+               | "[" ("," expression)*? "]"
+               | IDENTIFIER ;
+
+#######################################################################
+#######################################################################
